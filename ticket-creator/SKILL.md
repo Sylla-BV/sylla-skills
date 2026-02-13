@@ -1,162 +1,142 @@
 ---
 name: ticket-creator
-description: Creates well-structured Linear tickets from feature requests, bug reports, or technical tasks. Use when asked to create a ticket, write a Linear issue, plan work, or break down a task into subtasks.
-allowed-tools: Read, Bash, Edit
+description: >-
+  This skill should be used when the user asks to "create a ticket",
+  "create a Linear ticket", "make a ticket", "write a ticket",
+  "create an issue", "file a bug", "create a feature ticket",
+  "write a bug report", "I need a ticket for...", "there's a bug in...",
+  "turn this into a ticket", "write this up as a ticket",
+  or wants to create any Linear issue for implementation.
+version: 1.0.0
+allowed_tools:
+  - AskUserQuestion
+  - Task
+  - mcp__claude_ai_Linear__create_issue
+  - mcp__claude_ai_Linear__list_issues
+  - mcp__claude_ai_Linear__get_issue
+  - mcp__claude_ai_Linear__list_teams
 ---
 
 # Ticket Creator
 
-## Instructions
+Create well-structured Linear tickets optimized for AI agent (Claude Code) implementation. Follow a pattern-first, template-driven workflow that ensures the implementing agent can plan and execute without making open-ended architectural decisions. Consult `references/guidelines.md` for detailed quality criteria and writing guidelines.
 
-### Title conventions
+## Core Principle: Pattern-First
 
-- Imperative mood, max 80 characters
-- Prefix with area in brackets: `[API]`, `[Frontend]`, `[Auth]`, `[Infra]`, `[Curriculum]`
-- Be specific: `[API] Add rate limiting to search endpoint` not `Fix search`
+The strongest predictor of ticket success is whether the implementing agent can copy-and-adapt from an existing pattern. Every ticket MUST reference an existing code pattern or explicitly flag it as a first-time pattern requiring extra specification.
 
-### Description format
+## AskUserQuestion Usage
 
-Every ticket follows this structure:
+Only invoke `AskUserQuestion` when the answer cannot be deduced from the current conversation context, the codebase, or prior responses. If the information is available or can be inferred, proceed without asking. This applies to all stages — classification, deduplication, information gathering, anti-pattern resolution, splitting, and confirmation.
 
-```markdown
-## Context
-Why this work matters. Link to the trigger — a support ticket, a product decision, a tech debt observation.
+## Workflow
 
-## Requirements
-- Numbered list of what needs to happen
-- Each requirement is independently verifiable
+### 1. Gather Context & Classify
 
-## Acceptance Criteria
-- [ ] Checkboxes that define "done"
-- [ ] Written from the user/system perspective
-- [ ] Include edge cases worth calling out
+Extract as much information as possible from the current conversation before asking any questions. If work has been discussed, use that context to pre-fill ticket details.
 
-## Technical Notes (optional)
-Implementation hints, relevant files, related PRs. Don't over-specify — trust the engineer.
-```
+Classify the ticket:
+- **Normal** (feature, improvement, refactor) → `references/template-normal.md`
+- **Bug** (error, broken behavior) → `references/template-bug.md`
 
-### Team assignment
+Identify the domain from context or keywords:
 
-- **Sylla Tech** — backend, infrastructure, APIs, database, DevOps
-- **Sylla Product** — frontend, UI/UX, user-facing features, design implementation
-- **SyllaCX** — customer support tooling, onboarding, CX workflows
+| Domain | Keywords |
+|--------|----------|
+| UI | page, component, layout, frontend, table, form, modal, sidebar |
+| Backend | server action, API, endpoint, database, schema, query, migration, job |
+| Data-Engine | harvester, actor, pipeline, scraper, PDF, Python, data-engine |
 
-### Label selection
+If classification is ambiguous, use `AskUserQuestion` to clarify.
 
-Apply exactly one primary label:
+### 2. Check for Duplicates
 
-| Label | When to use |
-|-------|------------|
-| **Feature** | New capability that doesn't exist yet |
-| **Bug** | Something is broken or behaving incorrectly |
-| **Improvement** | Enhancing existing functionality |
-| **Task** | Operational work, migrations, config changes |
-| **Spike** | Time-boxed research or investigation |
-| **Tech debt** | Refactoring, cleanup, performance work |
-| **Support Ticket** | Triggered by a customer support request |
+Search Linear for existing similar tickets using `list_issues` with relevant search terms. If a matching ticket exists, surface it and ask whether to proceed or update the existing ticket.
 
-### Priority assignment
+### 3. Load Template & Gather Information
 
-| Priority | Criteria |
-|----------|----------|
-| **Urgent** (P1) | Production is broken, data loss risk, security issue |
-| **High** (P2) | Blocks other work, affects multiple users, committed deadline |
-| **Normal** (P3) | Default. Important but not time-sensitive |
-| **Low** (P4) | Nice-to-have, exploratory, long-term cleanup |
+Load the appropriate template from `references/`. Gather missing required information conversationally, 1-2 questions at a time, in this priority order:
 
-When in doubt, use Normal. Urgency inflation helps nobody.
+1. What are we building/fixing and why? What's the scope?
+2. Is there an existing pattern to follow? (**most critical**)
+3. Technical details — types, contracts, file paths
+4. Side effects, integration points, permissions
+5. Acceptance criteria and verification hints
 
-### Estimation
+For **bug tickets**: if a Sentry issue ID or URL is available, use the Sentry MCP to auto-populate error details (see `references/template-bug.md` for integration details).
 
-Use Linear's point scale as a rough proxy for complexity:
+### 4. Pattern Discovery
 
-| Points | Meaning |
-|--------|---------|
-| 1 | Trivial — config change, copy update, obvious fix |
-| 2 | Small — well-scoped, single-file, < half day |
-| 3 | Medium — touches multiple files, needs some investigation |
-| 5 | Large — multi-day, cross-cutting, needs design decisions |
-| 8 | Epic-sized — break this down into subtasks |
+Use `Task` with subagent_type `Explore` to search the codebase for:
+- Existing implementations to reference as patterns
+- Relevant Claude Code skills (scan `.claude/` directories for `SKILL.md` files)
 
-If you estimate 8, stop and create subtasks instead.
+Include discovered patterns in the ticket's "Existing pattern to follow" field. Include discovered skills in the Implementation Toolkit section using the format: `skills: [skill-name-1, skill-name-2]`
 
-### Subtasks vs standalone tickets
+### 5. Quality Gate
 
-**Create subtasks** when:
-- A single feature has 3+ distinct implementation steps
-- Work can be parallelized across engineers
-- You want incremental reviewability
+Run all anti-pattern checks from `references/anti-patterns.md`. Surface any warnings and resolve them with the user before proceeding.
 
-**Keep it standalone** when:
-- The work is atomic and coherent
-- Breaking it down adds overhead without clarity
+Evaluate whether the ticket should be **split** (see Ticket Splitting below).
 
-Subtask titles must be independently understandable — someone reading the subtask outside the parent should know what to do.
+### 6. Draft & Confirm
 
-### Linking
+Compile the ticket using the loaded template. Present a **concise preview** — title, summary, key fields, acceptance criteria — not the full ticket body.
 
-- Reference related tickets: "Related to TECH-123"
-- Link PRs in the technical notes when known
-- If a ticket blocks another, set the blocking relationship explicitly
+Ask the user to confirm or request changes before creating.
 
-## Formatting rules
+### 7. Create in Linear
 
-- Title: imperative mood, max 80 chars, area prefix in brackets
-- Description: use the Context → Requirements → Acceptance Criteria → Technical Notes template
-- Subtask titles: independently understandable, no "Part 1 / Part 2"
-- Use markdown formatting in descriptions — bullet lists, checkboxes, code blocks
-- Don't write novels. A good ticket is scannable in 30 seconds.
+Create the ticket using `create_issue` with: team ("Sylla Tech"), title, description, priority. Only set assignee if the user specifies one.
 
-## Examples
+If dependencies exist, use `blockedBy` or `blocks` fields. Link related tickets found during deduplication using `relatedTo`.
 
-### Feature request
+Share the ticket link with the user after creation.
 
-**Title:** `[Curriculum] Add bulk import for learning objectives`
+## Ticket Splitting
 
-**Description:**
-```markdown
-## Context
-Teachers are manually entering learning objectives one at a time. Schools with 200+ objectives need a faster path. Requested by multiple onboarding customers.
+### Multi-Category Split
 
-## Requirements
-1. Accept CSV upload with columns: objective title, subject, grade level
-2. Validate all rows before importing (fail entire batch on errors)
-3. Show preview table before confirming import
-4. Create audit log entry for bulk imports
+If work spans multiple domains (e.g., UI + Backend + Data-Engine), create separate linked tickets — one per domain. Run stages 3-7 for each, carrying forward shared context (priority, description, related tickets). Cross-link tickets using `relatedTo`.
 
-## Acceptance Criteria
-- [ ] CSV with valid data imports all objectives correctly
-- [ ] Invalid CSV shows clear error messages per row
-- [ ] Preview step shows exactly what will be created
-- [ ] Import of 500 objectives completes in < 10s
+### File-Based Split
 
-## Technical Notes
-Existing single-create endpoint: `POST /api/objectives`. Consider a new batch endpoint rather than looping. See `ObjectiveService.create()` for validation logic to reuse.
-```
+If a ticket would modify more than **8 files**, suggest splitting into smaller, focused tickets. Each split ticket should be independently implementable.
 
-**Label:** Feature | **Priority:** Normal | **Estimate:** 5 | **Team:** Sylla Tech
+## Title Conventions
 
-### Bug report
+| Type | Format |
+|------|--------|
+| Feature | `Implement [thing] for [purpose]` |
+| UI Page | `Create [page name] page at [route]` |
+| UI Component | `Add [component] to [location]` |
+| API/Endpoint | `Add [method] [endpoint] endpoint` |
+| Refactor | `Refactor [what] to [improvement]` |
+| Bug | `Fix [symptom] in [location]` |
 
-**Title:** `[Auth] Session expires during active use after IdP token refresh`
+## Reference Files
 
-**Description:**
-```markdown
-## Context
-Support ticket from Marnix College. Teachers report being logged out mid-session, especially around the 1-hour mark. Likely related to the IdP token refresh flow not extending our session TTL.
+| File | Purpose |
+|------|---------|
+| `references/template-normal.md` | Template for features, improvements, refactors (with conditional UI/Backend/Data-Engine sections) |
+| `references/template-bug.md` | Template for bug fixes (with Sentry MCP integration) |
+| `references/anti-patterns.md` | Anti-pattern detection rules to run before ticket creation |
+| `references/guidelines.md` | Quality criteria, writing guidelines, and verification rules |
+| `references/layout-patterns.md` | UI layout pattern decision table and component reference |
 
-## Requirements
-1. Diagnose whether session expiry ignores IdP token refresh events
-2. Extend session TTL when a valid token refresh occurs
-3. Add logging around session extension decisions
+## Example Tickets
 
-## Acceptance Criteria
-- [ ] Active users are not logged out when their IdP token refreshes
-- [ ] Session TTL extends by the configured duration on valid refresh
-- [ ] Auth debug logs include refresh-triggered extension events
+Consult these real ticket examples to calibrate structure and detail level:
 
-## Technical Notes
-Session middleware: `src/middleware/session.ts`. IdP callback: `src/auth/idp-callback.ts`. Current TTL is 3600s, configured in `SESSION_TTL_SECONDS`.
-```
+| Example | Domain | Based On |
+|---------|--------|----------|
+| `examples/backend-ticket.md` | Backend (server action + API) | S-1176 |
+| `examples/bug-ticket.md` | Bug fix (root cause known) | S-1222 |
+| `examples/data-engine-ticket.md` | Data-engine harvester | S-1149 |
+| `examples/ui-ticket.md` | UI page creation | S-1163 |
 
-**Label:** Bug | **Priority:** High | **Estimate:** 3 | **Team:** Sylla Tech
+## Quality Test
+
+Before creating, verify: *"Could the implementing agent create a complete plan from this ticket without making any open-ended architectural decisions?"*
+
+If the answer is no, identify what's ambiguous and ask for it. See `references/guidelines.md` for the full quality checklist.
