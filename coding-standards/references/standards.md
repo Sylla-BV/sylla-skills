@@ -1,0 +1,615 @@
+# Full Coding Standards
+
+Sylla-specific standards for this Next.js 16 App Router codebase. All rules below are settled and enforced in code review.
+
+---
+
+## TypeScript
+
+### `interface` vs `type`
+
+Use `interface` for all named object shapes — props, data models, function parameter objects. Use `type` for unions, intersections, and mapped/utility types that cannot be expressed as an interface.
+
+The rationale: TypeScript compiles interfaces faster than type aliases because interfaces are cached by name. Type aliases are re-evaluated on every use.
+
+```typescript
+// ✅ interface for props and object shapes
+interface StatusBadgeProps extends VariantProps<typeof statusBadgeVariants> {
+  status: NonNullable<VariantProps<typeof statusBadgeVariants>['status']>;
+  className?: string;
+}
+
+interface CoursePageData {
+  course: CourseWithEnhancementStatus;
+  permissions: CoursePermissions;
+  isLocked: boolean;
+  isDraft: boolean;
+}
+
+// ✅ type for unions and utility types
+type Role = 'admin' | 'member' | 'viewer';
+type SnakeCaseObject<T> = { [K in keyof T as SnakeCase<K>]: T[K] };
+type Result<T> = Success<T> | Failure;
+
+// ❌ type for plain object shapes
+type ReadingListFormProps = {
+  organizationalUnits: OrgUnit[];
+  currentUserId: string;
+};
+```
+
+### `React.FC<T>` — banned
+
+Never use `React.FC<T>` or `React.FunctionComponent<T>`. It is a React 17-era pattern that implicitly includes `children` in props and obscures return types. Type props explicitly with `interface` and let TypeScript infer the JSX return.
+
+```typescript
+// ✅
+interface StatusBadgeProps { ... }
+const StatusBadge = ({ status, className }: StatusBadgeProps) => { ... };
+
+// ❌
+const StatusBadge: React.FC<StatusBadgeProps> = ({ status, className }) => { ... };
+```
+
+### Explicit Return Types
+
+Required on all exported functions and server actions. Optional (inferred) on internal helpers and inline event handlers.
+
+```typescript
+// ✅ Explicit — exported server action
+export const getCoursePageData = async (
+  courseId: number,
+  sessionClaims: CustomJwtSessionClaims
+): Promise<CoursePageData | null> => {
+  // ...
+};
+
+// ✅ Explicit — exported DB query
+export const getUsersData = async ({
+  page,
+  pageSize
+}: GetUsersDataParams): Promise<Result<{ users: UserWithStats[]; totalCount: number }>> => {
+  // ...
+};
+
+// ✅ Inferred — internal handler
+const highlight = (text: string, query: string) => {
+  return text.replace(query, `<strong>${query}</strong>`);
+};
+```
+
+### `null` vs `undefined`
+
+Use `null` for intentional absence, especially DB returns. Use `undefined` for optional parameters (TypeScript's default for `?`).
+
+```typescript
+// ✅ DB query returns null when record not found
+export const getCoursePageData = async (...): Promise<CoursePageData | null> => {
+  if (!course || !canView) return null;
+};
+
+// ✅ Optional param — undefined is implicit
+const getInitialData = (claims: Claims, searchParams?: SearchParams) => { ... };
+```
+
+Always use optional chaining and nullish coalescing over manual null checks:
+
+```typescript
+// ✅
+const initialData = result?.data ?? null;
+const showToast = result?.showToast ?? false;
+
+// ❌
+const initialData = result && result.data ? result.data : null;
+```
+
+### Immutability
+
+Never mutate objects or arrays directly. Always use spread operators.
+
+```typescript
+// ✅
+const updatedCourse = { ...course, status: 'active' };
+const updatedItems = [...items, newItem];
+
+// ❌
+course.status = 'active';
+items.push(newItem);
+```
+
+---
+
+## Functions & Components
+
+### Arrow Functions — Always
+
+All functions use arrow syntax. Never use the `function` keyword, including for React components, server actions, DB queries, and utilities.
+
+```typescript
+// ✅ Arrow — component
+const StatusBadge = ({ status, className }: StatusBadgeProps) => {
+  return <Badge className={cn(statusBadgeVariants({ status }), className)}>{status}</Badge>;
+};
+
+// ✅ Arrow — server action
+export const getCoursePageData = async (
+  courseId: number,
+  sessionClaims: CustomJwtSessionClaims
+): Promise<CoursePageData | null> => {
+  // ...
+};
+
+// ✅ Arrow — DB query
+export const getRecentChatsForUser = async ({
+  userId,
+  institutionId
+}: GetChatsParams): Promise<Chat[]> => {
+  // ...
+};
+
+// ❌ function keyword
+export async function getCoursePageData(...) { ... }
+export function StatusBadge(...) { ... }
+```
+
+**Exception:** Next.js file-convention exports (`page.tsx`, `layout.tsx`, `error.tsx`) use `export default function` because Next.js expects default exports for these and the `function` keyword is idiomatic there. This is the only exception.
+
+```typescript
+// ✅ Exception — Next.js file conventions only
+export default function CoursesPage({ searchParams }: PageProps) { ... }
+export default function RootLayout({ children }: { children: React.ReactNode }) { ... }
+```
+
+### Component Exports
+
+A file containing a single component uses a default export. Files that export multiple utilities or components use named exports.
+
+```typescript
+// ✅ Single component file — default export
+// src/components/adoptions/status-badge.tsx
+const StatusBadge = ({ status, className }: StatusBadgeProps) => { ... };
+export default StatusBadge;
+
+// ✅ Multiple exports from one file — named exports
+// src/components/data-tables/all-books/columns.tsx
+export const nameColumn = ...;
+export const statusColumn = ...;
+export const actionsColumn = ...;
+```
+
+### Props Definition
+
+For **short props lists (<4 props)**, destructure directly in the parameter signature:
+
+```typescript
+// ✅ Short — destructure in signature
+const AdminGroup = ({ currentPath }: AdminGroupProps) => { ... };
+const LoadingSpinner = ({ size = 'md', className }: LoadingSpinnerProps) => { ... };
+```
+
+For **long props lists (4+ props)**, receive as a named parameter and destructure in the first line of the body. This keeps the function signature scannable:
+
+```typescript
+// ✅ Long — destructure in body
+const AddReadingListForm = (props: AddReadingListFormProps) => {
+  const { organizationalUnits, currentUserId, courseId, onSuccess, initialValues } = props;
+  // ...
+};
+```
+
+**Props type naming:** Always `interface`, always suffixed with `Props`, always named after the component.
+
+```typescript
+// ✅
+interface StatusBadgeProps { ... }
+const StatusBadge = ({ status }: StatusBadgeProps) => { ... };
+
+// ❌
+type Props = { ... };
+interface BadgeProps { ... }  // too generic
+```
+
+### Default Parameter Values
+
+Always set defaults in the destructure in the function signature (parameter list), not inside the body.
+
+```typescript
+// ✅
+const ReadingListBarChart = ({
+  chartData,
+  loading = false
+}: ReadingListBarChartProps) => { ... };
+
+// ❌
+const ReadingListBarChart = ({ chartData, loading }: ReadingListBarChartProps) => {
+  const isLoading = loading ?? false;
+};
+```
+
+---
+
+## Error Handling
+
+### Never Throw — Always `tryCatch`
+
+Never throw errors from any exported function (server actions, DB queries, utilities). Every operation that can fail must be wrapped in the `tryCatch` utility, which returns a `Result<T>`.
+
+This applies at every layer — not just server actions. DB query functions called by server actions must also be wrapped.
+
+```typescript
+// ✅ Server action — wrapped in tryCatch
+export const extractAndStoreCourseData = async ({
+  base64Content,
+  fileName,
+  fileSize
+}: ExtractCourseDataParams) => {
+  return tryCatch(async () => {
+    const { userId } = await getCurrentUser();
+    const { data, error } = await extractCourseData({ buffer, fileName, fileSize, userId });
+    if (!data) throw new Error(error?.message ?? 'Extraction failed');
+    const key = `course:parsed:${userId}:${crypto.randomUUID()}`;
+    await setCachedValue(key, data, { ttl: 1800 });
+    return { importKey: key };
+  });
+};
+
+// ✅ DB query function — also wrapped
+export const getUsersInInstitution = async ({
+  institutionId,
+  page
+}: GetUsersParams) => {
+  return tryCatch(async () => {
+    return db.query.users.findMany({
+      where: (users, { eq }) => eq(users.institutionId, institutionId),
+    });
+  });
+};
+
+// ❌ Never throw from an exported function
+export const getResource = async (id: number) => {
+  const resource = await db.query.learningResources.findFirst(...);
+  if (!resource) throw new Error('Resource not found'); // ❌
+};
+```
+
+### `Result<T>` — Consuming at the Call Site
+
+All callers of `tryCatch`-wrapped functions must handle both branches before accessing data.
+
+```typescript
+// ✅
+const result = await getUsersData({ page, pageSize });
+if (!result.data) {
+  toast.error(result.error);
+  return;
+}
+// result.data is now typed and safe
+doSomethingWith(result.data.users);
+```
+
+### Client Component Error Handling
+
+Client-side event handlers use manual `try/catch` with a toast for user feedback and Sentry for observability.
+
+```typescript
+// ✅
+const handleSubmit = async () => {
+  try {
+    await createNote({ title, content });
+    toast.success('Note created');
+  } catch (error) {
+    toast.error('Failed to create note');
+    captureException(error, { tags: { component: 'NoteForm' } });
+  }
+};
+```
+
+---
+
+## File Organization
+
+### File Naming
+
+kebab-case everywhere. Name files for what they do, not the library they use.
+
+```
+// ✅
+src/actions/simsearch.ts        // function name
+src/hooks/use-outside.ts
+src/components/status-badge.tsx
+
+// ❌
+src/actions/qdrant.ts           // provider name
+src/hooks/useOutside.ts         // camelCase
+src/components/StatusBadge.tsx  // PascalCase
+```
+
+### Where Things Live
+
+| What | Where |
+|---|---|
+| Reusable DB query | `src/db/queries/[domain].ts` |
+| Route-specific server action | `src/app/.../[route]/_actions.ts` |
+| Reusable server action (non-DB) | `src/actions/[feature].ts` |
+| React component | `src/components/[domain]/` |
+| Custom hook | `src/hooks/use-[name].ts` |
+| Shared constants | `src/lib/constants.ts` |
+| Zod schemas / types | co-located `[name].types.ts` or `src/ai/schemas.ts` for AI |
+
+### Barrel `index.ts` Files
+
+**Default: no barrels.** Use path aliases (`@/components/status-badge`) to import directly from the source file.
+
+Only introduce a barrel `index.ts` when both conditions are true:
+1. The import ergonomics are genuinely painful (consumers are forced to know about internal file structure they shouldn't care about)
+2. The module is provably isomorphic (safe to run in both server and client environments)
+
+```typescript
+// ✅ Default — import directly using alias
+import StatusBadge from '@/components/adoptions/status-badge';
+import { nameColumn } from '@/components/data-tables/all-books/columns';
+
+// ✅ Barrel only when justified — e.g. a data-table module hiding deep internals
+// src/components/data-tables/institutional-adoptions/index.ts
+export { InstitutionalAdoptionsTable } from './data-table';
+export type { AdoptionRow } from './types';
+```
+
+### `page-content.tsx` Pattern
+
+`page-content.tsx` is a client page shell. Use this pattern when a page is conceptually a client-side experience (it has interactivity, local state, user-facing controls) but benefits from pre-fetched server data that doesn't need to be re-fetched on the client.
+
+The split:
+- `page.tsx` — server component, fetches initial data, handles auth, passes data as props
+- `page-content.tsx` — `'use client'`, receives the pre-fetched data as props, owns all interactivity
+
+```
+// ✅ When to split: client-driven page that needs a one-time server data load
+page.tsx
+  └─ async, fetches courses + permissions
+  └─ passes to <PageContent courses={courses} permissions={permissions} />
+
+page-content.tsx
+  └─ 'use client'
+  └─ receives props, manages filters/sorting/modals
+  └─ may use TanStack mutations
+```
+
+If a page is purely server-rendered with no significant client interactivity, keep it as a single `page.tsx` — no split needed.
+
+---
+
+## Imports
+
+### Ordering
+
+Enforced by Prettier/ESLint. Within each group, order alphabetically.
+
+1. React / framework (`react`, `next/*`, `next-intl`)
+2. Third-party libraries
+3. Internal aliases (`@/components`, `@/db`, `@/lib`, `@/actions`)
+4. Relative imports (`./`, `../`)
+
+```typescript
+// ✅
+'use client';
+
+import { useState, useTransition } from 'react';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useTranslations } from 'next-intl';
+import { Button } from '@/components/ui/button';
+import { insertReadingList } from '@/db/queries/reading-lists';
+import { cn } from '@/lib/utils';
+```
+
+**No dynamic imports.** Always static imports at the top of the file. Never `await import()` inline.
+
+---
+
+## Database
+
+### Query Style
+
+Always use `db.query` syntax with the callback pattern. No raw SQL except in custom migrations.
+
+```typescript
+// ✅
+const source = await db.query.learningResources.findFirst({
+  where: (learningResources, { eq }) => eq(learningResources.id, resourceId),
+  with: {
+    children: {
+      orderBy: (children, { asc, desc }) => [
+        desc(children.currentVersion),
+        asc(children.orderIndex)
+      ]
+    }
+  }
+});
+
+// ❌
+const resource = await db.select().from(learningResources).where(eq(learningResources.id, id));
+```
+
+### Multiple Operations
+
+`db.batch()` over `Promise.all` for multiple DB operations — single round-trip.
+
+```typescript
+// ✅
+const [course, topic] = await db.batch([
+  db.query.courses.findFirst({ where: (c, { eq }) => eq(c.id, id) }),
+  db.query.topics.findFirst({ where: (t, { eq }) => eq(t.courseId, id) })
+]);
+
+// ❌
+const [course, topic] = await Promise.all([
+  db.query.courses.findFirst(...),
+  db.query.topics.findFirst(...)
+]);
+```
+
+### Multi-tenant Scoping
+
+Every query touching user or institution data must include `institutionId`.
+
+```typescript
+// ✅
+const courses = await db.query.courses.findMany({
+  where: (courses, { eq }) => eq(courses.institutionId, institutionId)
+});
+
+// ❌ missing institutionId
+const courses = await db.query.courses.findMany();
+```
+
+---
+
+## Naming
+
+### General Conventions
+
+| Thing | Convention | Example |
+|---|---|---|
+| Files & folders | kebab-case | `reading-list-form.tsx` |
+| Variables | camelCase | `isUserAuthenticated`, `totalRevenue` |
+| Functions | camelCase, verb-first | `getUserById`, `computeEnhancementStatus` |
+| React components | PascalCase | `StatusBadge`, `CourseCard` |
+| Interfaces & types | PascalCase | `CoursePageData`, `ReadingListFormProps` |
+| Hooks | camelCase, `use` prefix | `useCourseCollaborators`, `useOutside` |
+| Boolean variables | `is`, `has`, `can` prefix | `isLoading`, `hasEmbeddings`, `canView` |
+
+### Constants
+
+All constants are `SCREAMING_SNAKE_CASE` — whether global or local, at module level or inside a function body.
+
+```typescript
+// ✅ Global — src/lib/constants.ts
+export const FILTERS = {
+  MIN_SCORE_THRESHOLD: 0.75,
+  SCORE_THRESHOLD: 0.25,
+} as const;
+
+export const WORDS_PER_PAGE = 250 as const;
+
+// ✅ Local — module-level constant in a component file
+const NAVIGATION_ITEMS = [
+  { label: 'Email', value: 'email', href: '/institution/settings/email' },
+  { label: 'Integrations', value: 'integrations', href: '/institution/settings/integrations' },
+] as const;
+
+// ✅ Local — inside a function body
+const handleUpload = async () => {
+  const MAX_FILE_SIZE = 10 * 1024 * 1024;
+  const ALLOWED_TYPES = ['application/pdf'] as const;
+  // ...
+};
+
+// ❌ camelCase for constants
+const navigationItems = [...];
+const dropzoneConfig = { ... };
+```
+
+---
+
+## React & Next.js Patterns
+
+### Server vs Client Components
+
+No `'use client'` = Server Component. Add the directive only when you need React hooks, browser APIs, or event listeners.
+
+```typescript
+// ✅ Server component — async, no directive
+export const SimilarTopicsCard = async ({ topicId }: SimilarTopicsCardProps) => {
+  const t = await getTranslations('SimilarTopics');
+  const topics = await getSimilarTopics(topicId);
+  return <div>...</div>;
+};
+
+// ✅ Client component — explicit directive
+'use client';
+const SearchInput = ({ value, onChange }: SearchInputProps) => {
+  const [searchValue, setSearchValue] = useState(value);
+  // ...
+};
+```
+
+### Async Patterns
+
+`async/await` always. Parallel execution with `db.batch()` for DB, `Promise.all` for non-DB.
+
+```typescript
+// ✅ Parallel — non-DB server fetches
+const [orgUnits, initialData] = await Promise.all([
+  getAllOrganizationalUnits(),
+  getInitialData(sessionClaims, searchParams)
+]);
+
+// ❌ Sequential when parallel is possible
+const orgUnits = await getAllOrganizationalUnits();
+const initialData = await getInitialData(sessionClaims, searchParams);
+```
+
+### Loading & Error Boundaries
+
+Every route with a top-level `await` in `page.tsx` must have a sibling `loading.tsx`. Route groups with user-triggered mutations should have an `error.tsx`.
+
+```
+src/app/courses/
+├── page.tsx          ← has top-level await
+├── loading.tsx       ← required
+└── error.tsx         ← required (mutations possible)
+```
+
+### Early Returns
+
+Prefer early returns over nested conditionals.
+
+```typescript
+// ✅
+if (!user) return null;
+if (!user.isAdmin) return <Unauthorized />;
+if (!course) return <NotFound />;
+return <CourseView course={course} />;
+
+// ❌ Nested ternary hell
+return user
+  ? user.isAdmin
+    ? course ? <CourseView course={course} /> : <NotFound />
+    : <Unauthorized />
+  : null;
+```
+
+### State Updates
+
+Use the functional updater form whenever the next state depends on the previous state.
+
+```typescript
+// ✅
+setCount(prev => prev + 1);
+setItems(prev => [...prev, newItem]);
+
+// ❌ — stale closure risk in async scenarios
+setCount(count + 1);
+```
+
+---
+
+## Code Smell Checklist
+
+Review code for these before opening a PR:
+
+- [ ] Function longer than ~40 lines — can it be split?
+- [ ] More than 3 levels of nesting — use early returns
+- [ ] Magic number or string inline — extract to a named `SCREAMING_SNAKE_CASE` constant
+- [ ] `as any` anywhere — find the correct type
+- [ ] `type` used for a named object shape — change to `interface`
+- [ ] `React.FC<T>` — remove, type props with `interface` directly
+- [ ] `function` keyword (non–file-convention) — convert to arrow
+- [ ] Named export for a single-component file — convert to default export
+- [ ] `Promise.all` for DB queries — replace with `db.batch()`
+- [ ] `throw` inside an exported function — wrap the whole body in `tryCatch`
+- [ ] Missing `institutionId` in a DB query — multi-tenant violation
+- [ ] `await import()` inline — move to static top-of-file import
+- [ ] `middleware.ts` — must be `proxy.ts`
+- [ ] Wrapper function that only calls through to another — delete it
+- [ ] Barrel `index.ts` without clear justification — remove and use direct imports
