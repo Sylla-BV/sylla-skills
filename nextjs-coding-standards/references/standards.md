@@ -410,10 +410,12 @@ If a page is purely server-rendered with no significant client interactivity, ke
 
 ### Query Style
 
-Always use `db.query` syntax with the callback pattern. No raw SQL except in custom migrations.
+Prefer `db.query` (Drizzle's relational API) with the callback pattern — it's readable, type-safe, and handles relations cleanly. Fall back to the query builder (`db.select()`, `db.insert()`, etc.) only when the relational API can't express the query, such as inner joins, complex aggregations, or subqueries. No raw SQL except in custom migrations.
+
+**Decision rule:** Can `db.query` express this query? → use it. Does it require an inner join, aggregation, or subquery? → use `db.select()` with the query builder.
 
 ```typescript
-// ✅
+// ✅ Prefer db.query for straightforward relational reads
 const source = await db.query.learningResources.findFirst({
   where: (learningResources, { eq }) => eq(learningResources.id, resourceId),
   with: {
@@ -426,7 +428,14 @@ const source = await db.query.learningResources.findFirst({
   }
 });
 
-// ❌
+// ✅ Use db.select() when db.query can't express it (e.g. inner join)
+const results = await db
+  .select({ id: courses.id, title: courses.title, userName: users.name })
+  .from(courses)
+  .innerJoin(users, eq(courses.ownerId, users.id))
+  .where(eq(courses.institutionId, institutionId));
+
+// ❌ Don't use db.select() for simple queries that db.query handles fine
 const resource = await db.select().from(learningResources).where(eq(learningResources.id, id));
 ```
 

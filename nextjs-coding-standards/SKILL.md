@@ -104,7 +104,7 @@ Sylla-specific standards for the Next.js 16 App Router codebase. All rules are s
 
 | Rule | Standard |
 |------|----------|
-| Query syntax | `db.query.*` with callback pattern |
+| Query syntax | Prefer `db.query.*` (relational API); use `db.select()` for inner joins / aggregations |
 | Raw SQL | Banned (except custom migrations) |
 | Multiple DB operations | `db.batch()` — not `Promise.all` |
 | `institutionId` on user/institution queries | Always required |
