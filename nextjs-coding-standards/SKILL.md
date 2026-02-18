@@ -71,6 +71,7 @@ Sylla-specific standards for the Next.js 16 App Router codebase. All rules are s
 | Object shapes, props, data models | `interface` |
 | Unions, intersections, mapped types | `type` |
 | `React.FC<T>` | Banned — type props with `interface` directly |
+| Named type for trivial one-off shape | Banned — use an inline type annotation instead |
 | Return types on exported functions | Required |
 | Return types on internal helpers | Inferred |
 | Intentional absence (DB returns) | `null` |
@@ -167,6 +168,7 @@ Before opening a PR, check:
 - [ ] Magic number/string — extract to `SCREAMING_SNAKE_CASE` constant
 - [ ] `as any` — find the correct type
 - [ ] `type` for a named object shape — change to `interface`
+- [ ] Named `interface`/`type` for a trivial shape used in one place — inline it
 - [ ] `React.FC<T>` — remove it
 - [ ] `function` keyword (non–file-convention) — convert to arrow
 - [ ] Named export on single-component file — convert to default export

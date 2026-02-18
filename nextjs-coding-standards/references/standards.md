@@ -38,6 +38,47 @@ type ReadingListFormProps = {
 };
 ```
 
+### Avoid Unnecessary Type Declarations
+
+Do not create a named `interface` or `type` for trivial, one-off data shapes — especially when the shape is only used in a single place and carries no semantic meaning beyond what the property names already convey.
+
+If a value is simple enough to be expressed as an inline type annotation, leave it inline. Reserve named types for shapes that have real domain meaning, are reused in multiple places, or need documentation.
+
+```typescript
+// ✅ Inline — no ceremony needed for a simple local config
+const NAVIGATION_ITEMS: { label: string; href: string }[] = [
+  { label: 'Dashboard', href: '/dashboard' },
+  { label: 'Settings', href: '/settings' },
+];
+
+// ✅ Inline — trivial return shape used once
+const getPageMeta = (): { title: string; description: string } => ({
+  title: 'Courses',
+  description: 'Browse all courses',
+});
+
+// ❌ Named type for a trivial shape with no domain meaning
+interface NavItem {
+  label: string;
+  href: string;
+}
+const NAVIGATION_ITEMS: NavItem[] = [...];
+
+// ❌ Named type used in exactly one place
+type PageMeta = { title: string; description: string };
+const getPageMeta = (): PageMeta => ({ ... });
+
+// ✅ Named interface — reused, has domain meaning
+interface CoursePageData {
+  course: CourseWithEnhancementStatus;
+  permissions: CoursePermissions;
+  isLocked: boolean;
+  isDraft: boolean;
+}
+```
+
+**The test:** before extracting a named type, ask "does this shape have a name that means something in the domain, or will I use it in more than one place?" If the answer is no to both, use an inline type.
+
 ### `React.FC<T>` — banned
 
 Never use `React.FC<T>` or `React.FunctionComponent<T>`. It is a React 17-era pattern that implicitly includes `children` in props and obscures return types. Type props explicitly with `interface` and let TypeScript infer the JSX return.
@@ -603,6 +644,7 @@ Review code for these before opening a PR:
 - [ ] Magic number or string inline — extract to a named `SCREAMING_SNAKE_CASE` constant
 - [ ] `as any` anywhere — find the correct type
 - [ ] `type` used for a named object shape — change to `interface`
+- [ ] Named `interface`/`type` for a trivial shape used in one place — inline it
 - [ ] `React.FC<T>` — remove, type props with `interface` directly
 - [ ] `function` keyword (non–file-convention) — convert to arrow
 - [ ] Named export for a single-component file — convert to default export
