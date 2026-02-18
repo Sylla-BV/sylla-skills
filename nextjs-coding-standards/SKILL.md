@@ -1,5 +1,5 @@
 ---
-name: coding-standards
+name: nextjs-coding-standards
 description: >-
   This skill should be used when the user asks about "coding standards",
   "code style", "how should I write this", "is this correct style",

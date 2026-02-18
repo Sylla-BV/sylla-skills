@@ -1,5 +1,18 @@
 {
   "enabledPlugins": {
     "plugin-dev@claude-plugins-official": true
+  },
+    "permissions": {
+      "allow": [
+        "mcp__claude_ai",
+        "mcp__claude_ai_Linear__list_issue_statuses",
+        "Bash(git:*)",
+        "Bash(gh:*)",
+        "WebSearch",
+        "WebFetch"
+      ],
+      "ask": [
+        "Bash(git push:*)"
+      ]
   }
 }
