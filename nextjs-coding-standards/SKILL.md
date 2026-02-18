@@ -77,7 +77,6 @@ Sylla-specific standards for the Next.js 16 App Router codebase. All rules are s
 | Intentional absence (DB returns) | `null` |
 | Optional params | `undefined` (use `?`) |
 | Null guards | Optional chaining + nullish coalescing |
-| Object/array mutation | Forbidden — spread only |
 
 ### Functions & Components
 

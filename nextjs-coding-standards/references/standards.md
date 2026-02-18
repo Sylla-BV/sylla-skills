@@ -144,20 +144,6 @@ const showToast = result?.showToast ?? false;
 const initialData = result && result.data ? result.data : null;
 ```
 
-### Immutability
-
-Never mutate objects or arrays directly. Always use spread operators.
-
-```typescript
-// ✅
-const updatedCourse = { ...course, status: 'active' };
-const updatedItems = [...items, newItem];
-
-// ❌
-course.status = 'active';
-items.push(newItem);
-```
-
 ---
 
 ## Functions & Components
