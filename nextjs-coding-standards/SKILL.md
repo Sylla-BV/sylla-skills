@@ -57,7 +57,7 @@ Sylla-specific standards for the Next.js 16 App Router codebase. All rules are s
 ### 5. Security & Safety First
 
 - No `as any` — strictly forbidden, find the correct type
-- Multi-tenant scoping always — every DB query must include `institutionId`
+- Multi-tenant scoping always — every DB query must include `institutionId` (unless `isAdmin` is confirmed via `isSuperAdmin`)
 - Server Components by default — only add `'use client'` when you need interactivity or browser APIs
 
 ---
@@ -98,7 +98,8 @@ Sylla-specific standards for the Next.js 16 App Router codebase. All rules are s
 | Exported functions that can fail | Wrap entire body in `tryCatch`, return `Result<T>` |
 | `throw` from exported functions | Banned |
 | Consuming `Result<T>` | Check `result.data` branch before use |
-| Client event handlers | `try/catch` + `toast.error` + `captureException` |
+| Calling server actions from client | No `try/catch` needed — server action is wrapped in `tryCatch`; handle `Result<T>` branches |
+| React-query mutations | Handle errors via `onError` callback, not `try/catch` in `mutationFn` |
 
 ### Database
 
@@ -107,7 +108,7 @@ Sylla-specific standards for the Next.js 16 App Router codebase. All rules are s
 | Query syntax | Prefer `db.query.*` (relational API); use `db.select()` for inner joins / aggregations |
 | Raw SQL | Banned (except custom migrations) |
 | Multiple DB operations | `db.batch()` — not `Promise.all` |
-| `institutionId` on user/institution queries | Always required |
+| `institutionId` on user/institution queries | Required unless `isSuperAdmin` confirms admin |
 
 ### File & Naming
 
@@ -164,7 +165,7 @@ Before opening a PR, check:
 - [ ] Named export on single-component file — convert to default export
 - [ ] `Promise.all` for DB queries — replace with `db.batch()`
 - [ ] `throw` inside exported function — wrap in `tryCatch`
-- [ ] Missing `institutionId` in DB query — multi-tenant violation
+- [ ] Missing `institutionId` in DB query (and no `isSuperAdmin` check) — multi-tenant violation
 - [ ] `middleware.ts` — must be `proxy.ts`
 - [ ] Wrapper function that only calls through — delete it
 - [ ] Barrel `index.ts` without justification — remove, use direct imports

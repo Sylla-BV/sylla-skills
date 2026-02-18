@@ -316,19 +316,34 @@ doSomethingWith(result.data.users);
 
 ### Client Component Error Handling
 
-Client-side event handlers use manual `try/catch` with a toast for user feedback and Sentry for observability.
+There are two patterns depending on how the server action is called.
+
+**Calling server actions directly** — no `try/catch` needed on the client. The server action is already wrapped in `tryCatch` on the server side; just handle the `Result<T>` branches:
 
 ```typescript
 // ✅
 const handleSubmit = async () => {
-  try {
-    await createNote({ title, content });
-    toast.success('Note created');
-  } catch (error) {
+  const result = await createNote({ title, content });
+  if (!result.data) {
+    toast.error(result.error);
+    return;
+  }
+  toast.success('Note created');
+};
+```
+
+**React-query mutations** — handle errors via the `onError` callback, not `try/catch` in `mutationFn`:
+
+```typescript
+// ✅
+const mutation = useMutation({
+  mutationFn: (data: NoteInput) => createNote(data),
+  onSuccess: () => toast.success('Note created'),
+  onError: (error) => {
     toast.error('Failed to create note');
     captureException(error, { tags: { component: 'NoteForm' } });
-  }
-};
+  },
+});
 ```
 
 ---
@@ -459,7 +474,7 @@ const [course, topic] = await Promise.all([
 
 ### Multi-tenant Scoping
 
-Every query touching user or institution data must include `institutionId`.
+Every query touching user or institution data must include `institutionId`, unless the `isAdmin` flag has been checked via the `isSuperAdmin` utility (admin users can operate across institutions).
 
 ```typescript
 // ✅
@@ -467,7 +482,12 @@ const courses = await db.query.courses.findMany({
   where: (courses, { eq }) => eq(courses.institutionId, institutionId)
 });
 
-// ❌ missing institutionId
+// ✅ admin bypass — isSuperAdmin check already performed upstream
+if (isSuperAdmin(user)) {
+  const allCourses = await db.query.courses.findMany();
+}
+
+// ❌ missing institutionId (and no isSuperAdmin check)
 const courses = await db.query.courses.findMany();
 ```
 
@@ -529,8 +549,10 @@ No `'use client'` = Server Component. Add the directive only when you need React
 ```typescript
 // ✅ Server component — async, no directive
 export const SimilarTopicsCard = async ({ topicId }: SimilarTopicsCardProps) => {
-  const t = await getTranslations('SimilarTopics');
-  const topics = await getSimilarTopics(topicId);
+  const [t, topics] = await Promise.all([
+    getTranslations('SimilarTopics'),
+    getSimilarTopics(topicId),
+  ]);
   return <div>...</div>;
 };
 
