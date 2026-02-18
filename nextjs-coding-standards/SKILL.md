@@ -148,15 +148,6 @@ Sylla-specific standards for the Next.js 16 App Router codebase. All rules are s
 | `page-content.tsx` | Use when page is client-driven but needs a one-time server data load |
 | Routes with top-level `await` | Must have sibling `loading.tsx` |
 
-### Import Order
-
-1. React / framework (`react`, `next/*`, `next-intl`)
-2. Third-party libraries
-3. Internal aliases (`@/components`, `@/db`, `@/lib`, `@/actions`)
-4. Relative imports (`./`, `../`)
-
-Dynamic `await import()` is banned — static imports only.
-
 ---
 
 ## Code Smell Checklist
@@ -175,7 +166,6 @@ Before opening a PR, check:
 - [ ] `Promise.all` for DB queries — replace with `db.batch()`
 - [ ] `throw` inside exported function — wrap in `tryCatch`
 - [ ] Missing `institutionId` in DB query — multi-tenant violation
-- [ ] `await import()` inline — move to static import
 - [ ] `middleware.ts` — must be `proxy.ts`
 - [ ] Wrapper function that only calls through — delete it
 - [ ] Barrel `index.ts` without justification — remove, use direct imports

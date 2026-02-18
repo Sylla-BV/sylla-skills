@@ -420,33 +420,6 @@ If a page is purely server-rendered with no significant client interactivity, ke
 
 ---
 
-## Imports
-
-### Ordering
-
-Enforced by Prettier/ESLint. Within each group, order alphabetically.
-
-1. React / framework (`react`, `next/*`, `next-intl`)
-2. Third-party libraries
-3. Internal aliases (`@/components`, `@/db`, `@/lib`, `@/actions`)
-4. Relative imports (`./`, `../`)
-
-```typescript
-// ✅
-'use client';
-
-import { useState, useTransition } from 'react';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { useTranslations } from 'next-intl';
-import { Button } from '@/components/ui/button';
-import { insertReadingList } from '@/db/queries/reading-lists';
-import { cn } from '@/lib/utils';
-```
-
-**No dynamic imports.** Always static imports at the top of the file. Never `await import()` inline.
-
----
-
 ## Database
 
 ### Query Style
@@ -651,7 +624,6 @@ Review code for these before opening a PR:
 - [ ] `Promise.all` for DB queries — replace with `db.batch()`
 - [ ] `throw` inside an exported function — wrap the whole body in `tryCatch`
 - [ ] Missing `institutionId` in a DB query — multi-tenant violation
-- [ ] `await import()` inline — move to static top-of-file import
 - [ ] `middleware.ts` — must be `proxy.ts`
 - [ ] Wrapper function that only calls through to another — delete it
 - [ ] Barrel `index.ts` without clear justification — remove and use direct imports
