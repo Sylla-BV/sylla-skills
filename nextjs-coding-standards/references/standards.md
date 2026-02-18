@@ -316,12 +316,12 @@ doSomethingWith(result.data.users);
 
 ### Client Component Error Handling
 
-There are two patterns depending on how the server action is called.
+The pattern depends on how the server action is invoked.
 
-**Calling server actions directly** — no `try/catch` needed on the client. The server action is already wrapped in `tryCatch` on the server side; just handle the `Result<T>` branches:
+**Calling server actions directly** — no `try/catch` needed on the client. The server action is already wrapped in `tryCatch` on the server side, so it returns a `Result<T>`. The client just handles the two branches:
 
 ```typescript
-// ✅
+// ✅ Server action returns Result<T> — handle branches, no try/catch
 const handleSubmit = async () => {
   const result = await createNote({ title, content });
   if (!result.data) {
@@ -332,16 +332,27 @@ const handleSubmit = async () => {
 };
 ```
 
-**React-query mutations** — handle errors via the `onError` callback, not `try/catch` in `mutationFn`:
+**React-query mutations** — handle errors via the `onError` callback, not `try/catch` inside `mutationFn`:
 
 ```typescript
-// ✅
+// ✅ React-query — errors go in onError, not try/catch in mutationFn
 const mutation = useMutation({
   mutationFn: (data: NoteInput) => createNote(data),
   onSuccess: () => toast.success('Note created'),
   onError: (error) => {
     toast.error('Failed to create note');
     captureException(error, { tags: { component: 'NoteForm' } });
+  },
+});
+
+// ❌ Don't wrap mutationFn in try/catch — react-query handles the error flow
+const mutation = useMutation({
+  mutationFn: async (data: NoteInput) => {
+    try {
+      return await createNote(data);
+    } catch (error) {
+      toast.error('Failed');
+    }
   },
 });
 ```
@@ -482,9 +493,10 @@ const courses = await db.query.courses.findMany({
   where: (courses, { eq }) => eq(courses.institutionId, institutionId)
 });
 
-// ✅ admin bypass — isSuperAdmin check already performed upstream
-if (isSuperAdmin(user)) {
-  const allCourses = await db.query.courses.findMany();
+// ✅ Admin bypass — isSuperAdmin confirmed before the query
+const isAdmin = await isSuperAdmin(userId);
+if (isAdmin) {
+  return db.query.courses.findMany(); // cross-institution read is intentional
 }
 
 // ❌ missing institutionId (and no isSuperAdmin check)
@@ -640,7 +652,7 @@ Review code for these before opening a PR:
 - [ ] Named export for a single-component file — convert to default export
 - [ ] `Promise.all` for DB queries — replace with `db.batch()`
 - [ ] `throw` inside an exported function — wrap the whole body in `tryCatch`
-- [ ] Missing `institutionId` in a DB query — multi-tenant violation
+- [ ] Missing `institutionId` in a DB query (and no `isSuperAdmin` check) — multi-tenant violation
 - [ ] `middleware.ts` — must be `proxy.ts`
 - [ ] Wrapper function that only calls through to another — delete it
 - [ ] Barrel `index.ts` without clear justification — remove and use direct imports

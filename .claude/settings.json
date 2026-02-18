@@ -7,12 +7,11 @@
         "mcp__claude_ai",
         "mcp__claude_ai_Linear__list_issue_statuses",
         "Bash(git:*)",
+        "Bash(git push:*)",
         "Bash(gh:*)",
         "WebSearch",
         "WebFetch"
       ],
-      "ask": [
-        "Bash(git push:*)"
-      ]
+      "ask": []
   }
 }
