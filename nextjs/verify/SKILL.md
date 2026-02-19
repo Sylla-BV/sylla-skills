@@ -55,24 +55,25 @@ bun typecheck
 
 ---
 
-## Stage 4 — DB Audit (conditional)
+## Stage 4 — Coding Standards Audit (conditional)
 
-**Trigger:** Any changed file matches `src/db/queries/**`
+**Trigger:** Any changed file matches `**/*.ts` or `**/*.tsx`
 
-Dispatch a `feature-dev:code-reviewer` subagent (from the feature-dev skills collection) via the Task tool with this prompt:
+Dispatch a `general-purpose` subagent via the Task tool with this prompt:
 
 ```
-Review the following changed DB query files against the db-query skill conventions.
+Read nextjs/coding-standards/SKILL.md (the full skill, including the Code Smell Checklist).
 
-Changed files: <list>
+Run through every item in the Code Smell Checklist against the following changed files:
 
-Check for violations of:
-- institutionId scoping in every query
-- db.query callback syntax (not raw SQL)
-- db.batch() instead of Promise.all for multiple ops
-- No `as any` casting
+Changed files: <list of .ts/.tsx files>
 
-Report violations only. Ignore anything compliant.
+For each violation found, report:
+- File path and approximate line number
+- Which checklist item it violates
+- The offending code snippet
+
+Report violations only. If everything is clean, report "No violations found."
 ```
 
 **STOP — do not continue to Stage 5.**
@@ -157,7 +158,7 @@ fi
 
 | Changed files contain | Stage triggered |
 |---|---|
-| `src/db/queries/**` | Stage 4: DB audit |
+| `**/*.ts` or `**/*.tsx` | Stage 4: Coding standards audit |
 | `src/app/**/*.tsx`, `src/components/**`, `src/styles/**` | Stage 5: UI verification |
 | Neither | Stages 1–3 only |
 
@@ -168,10 +169,10 @@ fi
 When all stages pass, output:
 
 ```
-✅ Lint        — N files
+✅ Lint              — N files
 ✅ Typecheck
-✅ DB audit    — N files reviewed     (if triggered)
-✅ UI verified — N/N criteria passed  (if triggered)
+✅ Coding standards — N files, no violations  (if triggered)
+✅ UI verified       — N/N criteria passed    (if triggered)
 
 → Ready for: superpowers:finishing-a-development-branch
 ```
