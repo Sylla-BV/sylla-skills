@@ -11,6 +11,10 @@ version: 1.0.0
 allowed_tools:
   - AskUserQuestion
   - Task
+  - TaskCreate
+  - TaskList
+  - TaskGet
+  - TaskUpdate
   - mcp__claude_ai_Linear__create_issue
   - mcp__claude_ai_Linear__list_issues
   - mcp__claude_ai_Linear__get_issue
@@ -30,6 +34,8 @@ The strongest predictor of ticket success is whether the implementing agent can 
 Only invoke `AskUserQuestion` when the answer cannot be deduced from the current conversation context, the codebase, or prior responses. If the information is available or can be inferred, proceed without asking. This applies to all stages — classification, deduplication, information gathering, anti-pattern resolution, splitting, and confirmation.
 
 ## Workflow
+
+Use `TaskCreate` at the start to plan the workflow steps, and `TaskUpdate` to mark each step as you complete it. This keeps progress visible and survives `/compact`.
 
 ### 1. Gather Context & Classify
 
@@ -94,6 +100,8 @@ If dependencies exist, use `blockedBy` or `blocks` fields. Link related tickets 
 Share the ticket link with the user after creation.
 
 ## Ticket Splitting
+
+When splitting, use `TaskCreate` with `blockedBy` to model the dependency order between split tickets (e.g., backend before UI). Use `TaskList` to review progress and `TaskUpdate` to track each ticket through stages 3-7.
 
 ### Multi-Category Split
 
