@@ -62,7 +62,7 @@ bun typecheck
 Dispatch a `general-purpose` subagent via the Task tool with this prompt:
 
 ```
-Read nextjs/coding-standards/SKILL.md (the full skill, including the Code Smell Checklist).
+Read ./coding-standards/SKILL.md (the full skill, including the Code Smell Checklist).
 
 Run through every item in the Code Smell Checklist against the following changed files:
 
@@ -108,7 +108,7 @@ fi
 ### 5c — Dispatch Agent-Browser Task
 
 Spawn a `general-purpose` subagent via the Task tool. In the prompt:
-- Tell it to read `nextjs/agent-browser/SKILL.md` for the full command reference and session management patterns
+- Tell it to read `./agent-browser/SKILL.md` for the full command reference and session management patterns
 - Include the acceptance criteria from 5a
 - Include the relevant route(s) to navigate to
 - Ask it to use `--session-name verify` (auto-saves/restores Clerk session across runs)
@@ -117,7 +117,7 @@ Spawn a `general-purpose` subagent via the Task tool. In the prompt:
 
 **Example prompt (adapt route and criteria to this feature):**
 ```
-Read nextjs/agent-browser/SKILL.md for browser automation command reference, then verify the following at http://localhost:3000.
+Read ./agent-browser/SKILL.md for browser automation command reference, then verify the following at http://localhost:3000.
 
 Use --session-name verify for ALL commands. This auto-saves Clerk session state after
 first login so subsequent runs skip authentication.
