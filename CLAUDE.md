@@ -26,6 +26,8 @@ Every skill follows this layout:
 | ticket-creator | `ticket-creator/` | Create Linear tickets with pattern-first methodology |
 | coding-standards | `nextjs/coding-standards/` | Enforce Sylla conventions in Next.js 16 App Router |
 | brainstorming | `brainstorming/` | Design exploration before any implementation |
+| agent-browser | `nextjs/agent-browser/` | Browser automation CLI for AI agents (navigation, forms, screenshots) |
+| verify | `nextjs/verify/` | Multi-stage quality gate before opening a PR |
 
 ## Commit Conventions
 
