@@ -57,7 +57,9 @@ If classification is ambiguous, use `AskUserQuestion` to clarify.
 
 ### 2. Check for Duplicates
 
-Search Linear for existing similar tickets using `list_issues` with relevant search terms. If a matching ticket exists, surface it and ask whether to proceed or update the existing ticket.
+Use `Task` with subagent_type `general-purpose` to search Linear for existing similar tickets. Instruct the sub-agent to call `list_issues` with relevant search terms and return only: issue ID, title, URL, and a one-sentence summary per match. This prevents the raw `list_issues` payload from polluting the main context.
+
+If a matching ticket exists, surface it and ask whether to proceed or update the existing ticket.
 
 ### 3. Load Template & Gather Information
 
@@ -69,7 +71,7 @@ Load the appropriate template from `references/`. Gather missing required inform
 4. Side effects, integration points, permissions
 5. Acceptance criteria and verification hints
 
-For **bug tickets**: if a Sentry issue ID or URL is available, use the Sentry MCP to auto-populate error details (see `references/template-bug.md` for integration details).
+For **bug tickets**: if a Sentry issue ID or URL is available, use `Task` with subagent_type `general-purpose` to fetch the Sentry error details. Instruct the sub-agent to return only the fields needed for the ticket: error message, affected file/line, root cause (if determinable), frequency/user impact, and any relevant breadcrumbs. See `references/template-bug.md` for the full field list. This prevents verbose Sentry payloads (stack traces, raw breadcrumbs) from flooding the main context.
 
 ### 4. Pattern Discovery
 
