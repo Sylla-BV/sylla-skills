@@ -107,7 +107,8 @@ Sylla-specific standards for the Next.js 16 App Router codebase. All rules are s
 |------|----------|
 | Query syntax | Prefer `db.query.*` (relational API); use `db.select()` for inner joins / aggregations |
 | Raw SQL | Banned (except custom migrations) |
-| Multiple DB operations | `db.batch()` — not `Promise.all` |
+| Multiple raw Drizzle queries | `db.batch()` — single round-trip |
+| Independent async function calls | `Promise.all` — not `db.batch()` |
 | `institutionId` on user/institution queries | Required unless `isSuperAdmin` confirms admin |
 
 ### File & Naming
@@ -134,7 +135,8 @@ Sylla-specific standards for the Next.js 16 App Router codebase. All rules are s
 | React component | `src/components/[domain]/` |
 | Custom hook | `src/hooks/use-[name].ts` |
 | Shared constants | `src/lib/constants.ts` |
-| Zod schemas / types | co-located `[name].types.ts` |
+| Importable domain types | `src/lib/types/[domain].ts` |
+| Zod schemas | co-located `[name].types.ts` |
 
 ### React & Next.js
 
@@ -169,4 +171,6 @@ Before opening a PR, check:
 - [ ] `middleware.ts` — must be `proxy.ts`
 - [ ] Wrapper function that only calls through — delete it
 - [ ] Barrel `index.ts` without justification — remove, use direct imports
+- [ ] `interface`/`type` exported from a `'use server'` file — move to `src/lib/types/[domain].ts`
+- [ ] Sequential `for` loop over independent async calls — replace with `Promise.all`
 

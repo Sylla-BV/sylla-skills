@@ -387,7 +387,32 @@ src/components/StatusBadge.tsx  // PascalCase
 | React component | `src/components/[domain]/` |
 | Custom hook | `src/hooks/use-[name].ts` |
 | Shared constants | `src/lib/constants.ts` |
-| Zod schemas / types | co-located `[name].types.ts` or `src/ai/schemas.ts` for AI |
+| Importable domain types | `src/lib/types/[domain].ts` |
+| Zod schemas | co-located `[name].types.ts`; AI schemas in `src/ai/schemas.ts` |
+
+### Types Location
+
+Three distinct places for types — know which to use:
+
+- **`src/lib/types/[domain].ts`** — shared, importable domain types (interfaces and type aliases consumed across the codebase). Import from here freely.
+- **`types/` directory** — ambient global declarations only (Clerk session claims augmentations, i18n message types, module augmentations). Never import directly from this directory; TypeScript picks them up automatically.
+- **`'use server'` files** — must only export `async` server actions. Never export `interface` or `type` from a `'use server'` file; consumers importing that type will inadvertently pull the module into a server-only boundary. Move shared types to `src/lib/types/[domain].ts`.
+
+```typescript
+// ❌ Exporting a type from a 'use server' file
+'use server';
+export interface CreateBookParams { ... } // ❌ — move this out
+export const createBook = async (params: CreateBookParams) => { ... };
+
+// ✅ Type lives in src/lib/types/books.ts
+// src/lib/types/books.ts
+export interface CreateBookParams { ... }
+
+// src/app/books/_actions.ts
+'use server';
+import type { CreateBookParams } from '@/lib/types/books';
+export const createBook = async (params: CreateBookParams) => { ... };
+```
 
 ### Barrel `index.ts` Files
 
@@ -465,22 +490,54 @@ const results = await db
 const resource = await db.select().from(learningResources).where(eq(learningResources.id, id));
 ```
 
-### Multiple Operations
+### Dynamic Conditions
 
-`db.batch()` over `Promise.all` for multiple DB operations — single round-trip.
+When where conditions are dynamic (e.g. an optional filter), build a `conditions` array before the query rather than embedding inline ternaries inside the callback. This keeps queries readable and easy to extend.
 
 ```typescript
-// ✅
+// ✅ Build conditions array first
+const conditions = [eq(books.parentId, parentId)];
+if (!override) {
+  conditions.push(isNull(books.deletedAt));
+}
+const books = await db.query.books.findMany({
+  where: and(...conditions),
+});
+
+// ❌ Inline ternary inside callback — hard to read and extend
+const books = await db.query.books.findMany({
+  where: (books, { eq, isNull, and }) =>
+    and(eq(books.parentId, parentId), !override ? isNull(books.deletedAt) : undefined),
+});
+```
+
+### Multiple Operations
+
+**`db.batch()`** applies to raw Drizzle query objects (e.g. `db.query.*.findFirst(...)`, `db.update(...).set(...)`). These are sent together in a single round-trip.
+
+**`Promise.all`** applies to independent async function calls (e.g. calling `insertClosedBook(item)`, `getAllOrganizationalUnits()`). These are not Drizzle queries — do not use `db.batch()` here.
+
+```typescript
+// ✅ db.batch() — raw Drizzle queries, single round-trip
 const [course, topic] = await db.batch([
   db.query.courses.findFirst({ where: (c, { eq }) => eq(c.id, id) }),
   db.query.topics.findFirst({ where: (t, { eq }) => eq(t.courseId, id) })
 ]);
 
-// ❌
+// ❌ Promise.all for raw Drizzle queries — use db.batch() instead
 const [course, topic] = await Promise.all([
   db.query.courses.findFirst(...),
   db.query.topics.findFirst(...)
 ]);
+
+// ✅ Promise.all — independent async function calls (not raw Drizzle queries)
+const results = await Promise.all(items.map((item) => insertClosedBook(item)));
+
+// ❌ Sequential for loop over independent async calls — slow, use Promise.all
+const results = [];
+for (const item of items) {
+  results.push(await insertClosedBook(item));
+}
 ```
 
 ### Multi-tenant Scoping
