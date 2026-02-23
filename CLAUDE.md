@@ -30,6 +30,8 @@ Every skill follows this layout:
 | verify | `nextjs/verify/` | Multi-stage quality gate before opening a PR |
 | coding-standards (Python) | `python/coding-standards/` | Enforce Sylla conventions in Python data-engine code |
 | code-quality | `python/code-quality/` | Review Python files against coding standards and quality principles |
+| update-docstrings | `python/update-docstrings/` | Audit and update Python docstrings to match implementations |
+| update-tests | `python/update-tests/` | Audit test coverage and generate pytest-based tests |
 
 ## Commit Conventions
 
