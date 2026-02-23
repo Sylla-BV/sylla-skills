@@ -53,10 +53,6 @@ chore(brainstorming): update checklist order
 
 **No type escapes**: `as any` is forbidden; `interface` over `type` for object shapes.
 
-**Types location**: Shared importable types live in `src/lib/types/[domain].ts`. The `types/` directory is for ambient globals only (Clerk, i18n augmentations). `'use server'` files must never export `interface` or `type` — move them to `src/lib/types/`.
-
-**Parallelism rule**: `db.batch()` for raw Drizzle query objects (single round-trip); `Promise.all` for independent async function calls. Sequential `for` loops over independent async calls are a smell — replace with `Promise.all`.
-
 ## MCP & Tool Permissions
 
 `.claude/settings.json` grants:
