@@ -379,15 +379,38 @@ src/components/StatusBadge.tsx  // PascalCase
 
 ### Where Things Live
 
-| What | Where |
-|---|---|
-| Reusable DB query | `src/db/queries/[domain].ts` |
-| Route-specific server action | `src/app/.../[route]/_actions.ts` |
-| Reusable server action (non-DB) | `src/actions/[feature].ts` |
-| React component | `src/components/[domain]/` |
-| Custom hook | `src/hooks/use-[name].ts` |
-| Shared constants | `src/lib/constants.ts` |
-| Zod schemas / types | co-located `[name].types.ts` or `src/ai/schemas.ts` for AI |
+For the canonical file-location table, see the **Quick Reference → Where Things Live** section in `SKILL.md`.
+
+### Types Location
+
+Four distinct places for types — know which to use:
+
+- **`src/lib/types/[domain].ts`** — shared, importable domain types (interfaces, type aliases, and their co-located Zod schemas with `z.infer<>` types). This is the primary home for types consumed across multiple files. Import from here freely.
+- **`src/db/types.ts`** — database-inferred types (`SelectCourse`, `CourseWithTopics`, etc.) centralized from Drizzle schema. Do not scatter these across schema files.
+- **`src/components/[domain]/types.ts`** — types specific to a component domain, not needed outside that folder.
+- **`/types/[name].d.ts`** — ambient global declarations only (`declare global { interface ... }`), such as Clerk session claim augmentations and i18n message types. TypeScript picks these up automatically — never import from this directory.
+- **`'use server'` files** — must only export `async` server actions. Never export `interface` or `type` from a `'use server'` file; consumers importing that type will inadvertently pull the module into a server-only boundary. Move shared types to `src/lib/types/[domain].ts`.
+
+```typescript
+// ❌ Exporting a type from a 'use server' file
+'use server';
+export interface CreateBookParams { ... } // ❌ — move this out
+export const createBook = async (params: CreateBookParams) => { ... };
+
+// ✅ Type lives in src/lib/types/books.ts
+// src/lib/types/books.ts
+export interface CreateBookParams { ... }
+
+// src/app/books/_actions.ts
+'use server';
+import type { CreateBookParams } from '@/lib/types/books';
+export const createBook = async (params: CreateBookParams) => { ... };
+
+// ✅ Zod schema and inferred type co-located in domain type file
+// src/lib/types/adoptions.ts
+export const adoptionFilterSchema = z.object({ ... });
+export type AdoptionFilterOptions = z.infer<typeof adoptionFilterSchema>;
+```
 
 ### Barrel `index.ts` Files
 
@@ -465,22 +488,54 @@ const results = await db
 const resource = await db.select().from(learningResources).where(eq(learningResources.id, id));
 ```
 
-### Multiple Operations
+### Dynamic Conditions
 
-`db.batch()` over `Promise.all` for multiple DB operations — single round-trip.
+When where conditions are dynamic (e.g. an optional filter), build a `conditions` array before the query rather than embedding inline ternaries inside the callback. This keeps queries readable and easy to extend.
 
 ```typescript
-// ✅
+// ✅ Build conditions array first
+const conditions = [eq(books.parentId, parentId)];
+if (!override) {
+  conditions.push(isNull(books.deletedAt));
+}
+const books = await db.query.books.findMany({
+  where: and(...conditions),
+});
+
+// ❌ Inline ternary inside callback — hard to read and extend
+const books = await db.query.books.findMany({
+  where: (books, { eq, isNull, and }) =>
+    and(eq(books.parentId, parentId), !override ? isNull(books.deletedAt) : undefined),
+});
+```
+
+### Multiple Operations
+
+**`db.batch()`** applies to raw Drizzle query objects (e.g. `db.query.*.findFirst(...)`, `db.update(...).set(...)`). These are sent together in a single round-trip.
+
+**`Promise.all`** applies to independent async function calls (e.g. calling `insertClosedBook(item)`, `getAllOrganizationalUnits()`). These are not Drizzle queries — do not use `db.batch()` here.
+
+```typescript
+// ✅ db.batch() — raw Drizzle queries, single round-trip
 const [course, topic] = await db.batch([
   db.query.courses.findFirst({ where: (c, { eq }) => eq(c.id, id) }),
   db.query.topics.findFirst({ where: (t, { eq }) => eq(t.courseId, id) })
 ]);
 
-// ❌
+// ❌ Promise.all for raw Drizzle queries — use db.batch() instead
 const [course, topic] = await Promise.all([
   db.query.courses.findFirst(...),
   db.query.topics.findFirst(...)
 ]);
+
+// ✅ Promise.all — independent async function calls (not raw Drizzle queries)
+const results = await Promise.all(items.map((item) => insertClosedBook(item)));
+
+// ❌ Sequential for loop over independent async calls — slow, use Promise.all
+const results = [];
+for (const item of items) {
+  results.push(await insertClosedBook(item));
+}
 ```
 
 ### Multi-tenant Scoping
@@ -639,20 +694,4 @@ setCount(count + 1);
 
 ## Code Smell Checklist
 
-Review code for these before opening a PR:
-
-- [ ] Function longer than ~40 lines — can it be split?
-- [ ] More than 3 levels of nesting — use early returns
-- [ ] Magic number or string inline — extract to a named `SCREAMING_SNAKE_CASE` constant
-- [ ] `as any` anywhere — find the correct type
-- [ ] `type` used for a named object shape — change to `interface`
-- [ ] Named `interface`/`type` for a trivial shape used in one place — inline it
-- [ ] `React.FC<T>` — remove, type props with `interface` directly
-- [ ] `function` keyword (non–file-convention) — convert to arrow
-- [ ] Named export for a single-component file — convert to default export
-- [ ] `Promise.all` for DB queries — replace with `db.batch()`
-- [ ] `throw` inside an exported function — wrap the whole body in `tryCatch`
-- [ ] Missing `institutionId` in a DB query (and no `isSuperAdmin` check) — multi-tenant violation
-- [ ] `middleware.ts` — must be `proxy.ts`
-- [ ] Wrapper function that only calls through to another — delete it
-- [ ] Barrel `index.ts` without clear justification — remove and use direct imports
+For the Code Smell Checklist used during PR reviews, see the **Code Smell Checklist** section in `SKILL.md`.
