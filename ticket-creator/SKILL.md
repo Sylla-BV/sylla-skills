@@ -16,7 +16,6 @@ allowed_tools:
   - TaskGet
   - TaskUpdate
   - mcp__claude_ai_Linear__create_issue
-  - mcp__claude_ai_Linear__list_issues
   - mcp__claude_ai_Linear__get_issue
   - mcp__claude_ai_Linear__list_teams
 ---
@@ -57,9 +56,9 @@ If classification is ambiguous, use `AskUserQuestion` to clarify.
 
 ### 2. Check for Duplicates
 
-Use `Task` with subagent_type `general-purpose` to search Linear for existing similar tickets. Instruct the sub-agent to call `list_issues` with relevant search terms and return only: issue ID, title, URL, and a one-sentence summary per match. This prevents the raw `list_issues` payload from polluting the main context.
+Use `Task` with subagent_type `general-purpose` to search Linear for existing similar tickets. Pass the ticket description, key terms, and domain as context, along with the instructions from `references/duplicate-checker.md`. The subagent handles all `list_issues` calls and returns a concise summary.
 
-If a matching ticket exists, surface it and ask whether to proceed or update the existing ticket.
+If the subagent surfaces matching tickets, present them to the user and ask whether to proceed, update an existing ticket, or link as related.
 
 ### 3. Load Template & Gather Information
 
@@ -133,6 +132,7 @@ If a ticket would modify more than **8 files**, suggest splitting into smaller, 
 | `references/anti-patterns.md` | Anti-pattern detection rules to run before ticket creation |
 | `references/guidelines.md` | Quality criteria, writing guidelines, and verification rules |
 | `references/layout-patterns.md` | UI layout pattern decision table and component reference |
+| `references/duplicate-checker.md` | Subagent prompt for Linear duplicate search (used in step 2) |
 
 ## Example Tickets
 
