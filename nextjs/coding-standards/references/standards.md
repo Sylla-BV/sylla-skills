@@ -379,23 +379,16 @@ src/components/StatusBadge.tsx  // PascalCase
 
 ### Where Things Live
 
-| What | Where |
-|---|---|
-| Reusable DB query | `src/db/queries/[domain].ts` |
-| Route-specific server action | `src/app/.../[route]/_actions.ts` |
-| Reusable server action (non-DB) | `src/actions/[feature].ts` |
-| React component | `src/components/[domain]/` |
-| Custom hook | `src/hooks/use-[name].ts` |
-| Shared constants | `src/lib/constants.ts` |
-| Importable domain types | `src/lib/types/[domain].ts` |
-| Zod schemas | co-located `[name].types.ts`; AI schemas in `src/ai/schemas.ts` |
+For the canonical file-location table, see the **Quick Reference → Where Things Live** section in `SKILL.md`.
 
 ### Types Location
 
-Three distinct places for types — know which to use:
+Four distinct places for types — know which to use:
 
-- **`src/lib/types/[domain].ts`** — shared, importable domain types (interfaces and type aliases consumed across the codebase). Import from here freely.
-- **`types/` directory** — ambient global declarations only (Clerk session claims augmentations, i18n message types, module augmentations). Never import directly from this directory; TypeScript picks them up automatically.
+- **`src/lib/types/[domain].ts`** — shared, importable domain types (interfaces, type aliases, and their co-located Zod schemas with `z.infer<>` types). This is the primary home for types consumed across multiple files. Import from here freely.
+- **`src/db/types.ts`** — database-inferred types (`SelectCourse`, `CourseWithTopics`, etc.) centralized from Drizzle schema. Do not scatter these across schema files.
+- **`src/components/[domain]/types.ts`** — types specific to a component domain, not needed outside that folder.
+- **`/types/[name].d.ts`** — ambient global declarations only (`declare global { interface ... }`), such as Clerk session claim augmentations and i18n message types. TypeScript picks these up automatically — never import from this directory.
 - **`'use server'` files** — must only export `async` server actions. Never export `interface` or `type` from a `'use server'` file; consumers importing that type will inadvertently pull the module into a server-only boundary. Move shared types to `src/lib/types/[domain].ts`.
 
 ```typescript
@@ -412,6 +405,11 @@ export interface CreateBookParams { ... }
 'use server';
 import type { CreateBookParams } from '@/lib/types/books';
 export const createBook = async (params: CreateBookParams) => { ... };
+
+// ✅ Zod schema and inferred type co-located in domain type file
+// src/lib/types/adoptions.ts
+export const adoptionFilterSchema = z.object({ ... });
+export type AdoptionFilterOptions = z.infer<typeof adoptionFilterSchema>;
 ```
 
 ### Barrel `index.ts` Files
@@ -696,20 +694,4 @@ setCount(count + 1);
 
 ## Code Smell Checklist
 
-Review code for these before opening a PR:
-
-- [ ] Function longer than ~40 lines — can it be split?
-- [ ] More than 3 levels of nesting — use early returns
-- [ ] Magic number or string inline — extract to a named `SCREAMING_SNAKE_CASE` constant
-- [ ] `as any` anywhere — find the correct type
-- [ ] `type` used for a named object shape — change to `interface`
-- [ ] Named `interface`/`type` for a trivial shape used in one place — inline it
-- [ ] `React.FC<T>` — remove, type props with `interface` directly
-- [ ] `function` keyword (non–file-convention) — convert to arrow
-- [ ] Named export for a single-component file — convert to default export
-- [ ] `Promise.all` for DB queries — replace with `db.batch()`
-- [ ] `throw` inside an exported function — wrap the whole body in `tryCatch`
-- [ ] Missing `institutionId` in a DB query (and no `isSuperAdmin` check) — multi-tenant violation
-- [ ] `middleware.ts` — must be `proxy.ts`
-- [ ] Wrapper function that only calls through to another — delete it
-- [ ] Barrel `index.ts` without clear justification — remove and use direct imports
+For the Code Smell Checklist used during PR reviews, see the **Code Smell Checklist** section in `SKILL.md`.
