@@ -28,6 +28,9 @@ Every skill follows this layout:
 | brainstorming | `brainstorming/` | Design exploration before any implementation |
 | agent-browser | `nextjs/agent-browser/` | Browser automation CLI for AI agents (navigation, forms, screenshots) |
 | verify | `nextjs/verify/` | Multi-stage quality gate before opening a PR |
+| coding-standards (Python) | `python/coding-standards/` | Enforce Sylla conventions in Python data-engine code |
+| verify (Python) | `python/verify/` | Code quality gate for Python files |
+| code-upkeep | `python/code-upkeep/` | Audit and update Python docstrings and test coverage |
 
 ## Commit Conventions
 

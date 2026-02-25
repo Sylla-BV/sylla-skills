@@ -9,6 +9,9 @@ A collection of agent skills for AI coding assistants, built for Sylla's stack. 
 | Skill | Description | Install |
 |-------|-------------|---------|
 | [ticket-creator](./ticket-creator/) | Creates well-structured Linear tickets from feature requests, bug reports, or technical tasks | `bunx skills add sylla-bv/sylla-skills/ticket-creator` |
+| [coding-standards (Python)](./python/coding-standards/) | Enforces Sylla conventions in Python data-engine code | `bunx skills add sylla-bv/sylla-skills/python/coding-standards` |
+| [verify (Python)](./python/verify/) | Code quality gate for Python files | `bunx skills add sylla-bv/sylla-skills/python/verify` |
+| [code-upkeep](./python/code-upkeep/) | Audits and updates Python docstrings and test coverage | `bunx skills add sylla-bv/sylla-skills/python/code-upkeep` |
 
 ## Installation
 
