@@ -1,16 +1,17 @@
 ---
-name: code-quality-python
+name: verify
 description: >-
-  This skill should be used when the user asks to "review Python code",
-  "check code quality", "run a code review", "review this PR",
-  "check for code smells", "review against SOLID", "check DRY violations",
-  "review Python files", "quality check", "is this clean code",
-  "review my changes", or wants a structured code quality review
-  of Python files against SOLID, DRY, KISS, YAGNI, clean code,
-  error handling, security, and performance principles.
+  This skill should be used when the user says "verify", "check my work",
+  "review Python code", "check code quality", "run a code review",
+  "review this PR", "check for code smells", "review against SOLID",
+  "check DRY violations", "review Python files", "quality check",
+  "is this clean code", "review my changes", "run checks", "validate",
+  or wants a structured code quality review of Python files against
+  SOLID, DRY, KISS, YAGNI, clean code, error handling, security,
+  and performance principles.
 ---
 
-# Python Code Quality Review
+# Verify — Python Code Quality Gate
 
 Review modified Python files against coding standards and quality principles. Report only concrete violations that need fixing — not style nits or theoretical concerns.
 

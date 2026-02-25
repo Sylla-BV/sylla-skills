@@ -1,5 +1,5 @@
 ---
-name: coding-standards-python
+name: coding-standards
 description: >-
   This skill should be used when the user asks about "Python coding standards",
   "Python code style", "type hints", "type annotations", "Optional vs union",
