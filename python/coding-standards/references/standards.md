@@ -206,6 +206,26 @@ def harvest_books(
         HarvestingError: If all external APIs fail.
     """
     ...
+
+# ✅ Google-style docstring on class
+class BookProcessor:
+    """Orchestrates book processing pipeline.
+
+    Coordinates validation, enrichment, and storage of harvested
+    books across multiple data sources.
+
+    Attributes:
+        source_name: Name of the data source being processed.
+        max_batch_size: Maximum number of books per batch.
+    """
+
+# ✅ Pydantic model — use Field(description=...) instead of docstring Args
+class HarvestRequest(BaseModel):
+    """Request payload for the harvest endpoint."""
+
+    query: str = Field(description="Search query string.")
+    max_results: int = Field(default=100, description="Maximum results to return.")
+    sources: list[str] = Field(default_factory=list, description="Sources to query.")
 ```
 
 ### Function Length
