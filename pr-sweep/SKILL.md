@@ -12,6 +12,7 @@ allowed_tools:
   - Bash(gh api:*)
   - Bash(gh repo view:*)
   - Bash(git diff:*)
+  - Bash(jq:*)
   - Read
   - Grep
   - Glob
@@ -54,7 +55,7 @@ Extract `owner`, `repo`, and `pr_number` from the output.
 
 ### Step 2 - Fetch Unresolved Review Threads
 
-Run this GraphQL query to retrieve all review threads, then filter for threads where `isResolved: false`:
+Run this GraphQL query and pipe through `jq` to return only the fields needed for triage — keeps response lean and avoids flooding context with metadata:
 
 ```bash
 gh api graphql -F owner='OWNER' -F repo='REPO' -F pr=PR_NUMBER -f query='
@@ -67,22 +68,22 @@ query($owner: String!, $repo: String!, $pr: Int!) {
           isResolved
           path
           line
-          startLine
-          diffSide
-          comments(first: 50) {
+          comments(first: 1) {
             nodes {
-              id
               body
               author { login }
-              createdAt
             }
           }
         }
       }
     }
   }
-}'
+}' | jq '[.data.repository.pullRequest.reviewThreads.nodes[]
+  | select(.isResolved == false)
+  | {id, path, line, author: .comments.nodes[0].author.login, comment: .comments.nodes[0].body}]'
 ```
+
+The result is a compact array — one object per unresolved thread with only `id`, `path`, `line`, `author`, and `comment`.
 
 ### Step 3 - Analyze Each Unresolved Thread
 
@@ -111,9 +112,10 @@ mutation($threadId: ID!, $body: String!) {
     pullRequestReviewThreadId: $threadId,
     body: $body
   }) {
-    comment { id body }
+    comment { id }
   }
-}' -F threadId='THREAD_NODE_ID' -F body='REPLY_BODY'
+}' -F threadId='THREAD_NODE_ID' -F body='REPLY_BODY' \
+  | jq -r '.data.addPullRequestReviewThreadReply.comment.id'
 ```
 
 2. **Resolve** the thread:
@@ -122,9 +124,10 @@ mutation($threadId: ID!, $body: String!) {
 gh api graphql -f query='
 mutation($threadId: ID!) {
   resolveReviewThread(input: { threadId: $threadId }) {
-    thread { id isResolved }
+    thread { isResolved }
   }
-}' -F threadId='THREAD_ID'
+}' -F threadId='THREAD_ID' \
+  | jq -r '.data.resolveReviewThread.thread.isResolved'
 ```
 
 Keep replies concise - one or two sentences explaining the fix.
