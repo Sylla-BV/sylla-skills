@@ -31,6 +31,7 @@ Every skill follows this layout:
 | coding-standards (Python) | `python/coding-standards/` | Enforce Sylla conventions in Python data-engine code |
 | verify (Python) | `python/verify/` | Code quality gate for Python files |
 | code-upkeep | `python/code-upkeep/` | Audit and update Python docstrings and test coverage |
+| pr-sweep | `pr-sweep/` | Triage and resolve GitHub PR review comments |
 
 ## Commit Conventions
 
