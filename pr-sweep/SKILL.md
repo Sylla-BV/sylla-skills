@@ -1,11 +1,11 @@
 ---
-name: resolve-pr-comments
+name: pr-sweep
 description: >-
-  This skill should be used when the user asks to "resolve PR comments",
+  This skill should be used when the user asks to "sweep PR comments",
   "check PR feedback", "handle review comments", "auto-resolve comments",
   "address PR reviews", "fix PR comments", "resolve review threads",
-  "go through PR feedback", or wants to triage and resolve GitHub pull
-  request review comments.
+  "go through PR feedback", "clear PR reviews", or wants to triage and
+  resolve GitHub pull request review comments.
 version: 0.1.0
 allowed_tools:
   - Bash(gh pr view:*)
@@ -22,7 +22,7 @@ allowed_tools:
   - TaskUpdate
 ---
 
-# Resolve PR Comments
+# PR Sweep
 
 Triage unresolved GitHub PR review threads: auto-resolve comments already addressed by current code, reply with context, and create actionable tasks for remaining items.
 
@@ -54,7 +54,35 @@ Extract `owner`, `repo`, and `pr_number` from the output.
 
 ### Step 2 - Fetch Unresolved Review Threads
 
-Run the GraphQL query from `references/graphql-queries.md` (Section: Fetch Review Threads) to retrieve all review threads. Filter for threads where `isResolved: false`.
+Run this GraphQL query to retrieve all review threads, then filter for threads where `isResolved: false`:
+
+```bash
+gh api graphql -F owner='OWNER' -F repo='REPO' -F pr=PR_NUMBER -f query='
+query($owner: String!, $repo: String!, $pr: Int!) {
+  repository(owner: $owner, name: $repo) {
+    pullRequest(number: $pr) {
+      reviewThreads(first: 100) {
+        nodes {
+          id
+          isResolved
+          path
+          line
+          startLine
+          diffSide
+          comments(first: 50) {
+            nodes {
+              id
+              body
+              author { login }
+              createdAt
+            }
+          }
+        }
+      }
+    }
+  }
+}'
+```
 
 ### Step 3 - Analyze Each Unresolved Thread
 
@@ -74,8 +102,30 @@ Resolution criteria: only mark as addressed when the feedback is **fully** resol
 
 For each comment determined to be addressed:
 
-1. **Reply** to the thread explaining what was done, using the mutation from `references/graphql-queries.md` (Section: Reply to Thread)
-2. **Resolve** the thread using the mutation from `references/graphql-queries.md` (Section: Resolve Thread)
+1. **Reply** to the thread explaining what was done:
+
+```bash
+gh api graphql -f query='
+mutation($threadId: ID!, $body: String!) {
+  addPullRequestReviewThreadReply(input: {
+    pullRequestReviewThreadId: $threadId,
+    body: $body
+  }) {
+    comment { id body }
+  }
+}' -F threadId='THREAD_NODE_ID' -F body='REPLY_BODY'
+```
+
+2. **Resolve** the thread:
+
+```bash
+gh api graphql -f query='
+mutation($threadId: ID!) {
+  resolveReviewThread(input: { threadId: $threadId }) {
+    thread { id isResolved }
+  }
+}' -F threadId='THREAD_ID'
+```
 
 Keep replies concise - one or two sentences explaining the fix.
 
