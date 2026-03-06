@@ -58,7 +58,8 @@ Extract `owner`, `repo`, and `pr_number` from the output.
 Run this GraphQL query and pipe through `jq` to return only the fields needed for triage — keeps response lean and avoids flooding context with metadata:
 
 ```bash
-gh api graphql -F owner='OWNER' -F repo='REPO' -F pr=PR_NUMBER -f query='
+gh api graphql -F owner='OWNER' -F repo='REPO' -F pr=PR_NUMBER \
+  -f query="$(cat << 'GRAPHQL'
 query($owner: String!, $repo: String!, $pr: Int!) {
   repository(owner: $owner, name: $repo) {
     pullRequest(number: $pr) {
@@ -78,7 +79,9 @@ query($owner: String!, $repo: String!, $pr: Int!) {
       }
     }
   }
-}' | jq '[.data.repository.pullRequest.reviewThreads.nodes[]
+}
+GRAPHQL
+)" | jq '[.data.repository.pullRequest.reviewThreads.nodes[]
   | select(.isResolved == false)
   | {id, path, line, author: .comments.nodes[0].author.login, comment: .comments.nodes[0].body}]'
 ```
@@ -106,7 +109,8 @@ For each comment determined to be addressed:
 1. **Reply** to the thread explaining what was done:
 
 ```bash
-gh api graphql -f query='
+gh api graphql \
+  -f query="$(cat << 'GRAPHQL'
 mutation($threadId: ID!, $body: String!) {
   addPullRequestReviewThreadReply(input: {
     pullRequestReviewThreadId: $threadId,
@@ -114,19 +118,24 @@ mutation($threadId: ID!, $body: String!) {
   }) {
     comment { id }
   }
-}' -F threadId='THREAD_NODE_ID' -F body='REPLY_BODY' \
+}
+GRAPHQL
+)" -F threadId='THREAD_NODE_ID' -F body='REPLY_BODY' \
   | jq -r '.data.addPullRequestReviewThreadReply.comment.id'
 ```
 
 2. **Resolve** the thread:
 
 ```bash
-gh api graphql -f query='
+gh api graphql \
+  -f query="$(cat << 'GRAPHQL'
 mutation($threadId: ID!) {
   resolveReviewThread(input: { threadId: $threadId }) {
     thread { isResolved }
   }
-}' -F threadId='THREAD_ID' \
+}
+GRAPHQL
+)" -F threadId='THREAD_ID' \
   | jq -r '.data.resolveReviewThread.thread.isResolved'
 ```
 
