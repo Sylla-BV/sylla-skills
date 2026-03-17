@@ -381,15 +381,20 @@ src/components/StatusBadge.tsx  // PascalCase
 
 For the canonical file-location table, see the **Quick Reference → Where Things Live** section in `SKILL.md`.
 
+### Utility Functions
+
+**`src/lib/utils/[domain].ts`** — shared utility functions, organised by domain using kebab-case file names (e.g. `authorisation.ts`, `file-validation.ts`, `learning-resources.ts`). Place reusable, non-DB helper logic here rather than scattering it across feature folders.
+
 ### Types Location
 
 Four distinct places for types — know which to use:
 
-- **`src/lib/types/[domain].ts`** — shared, importable domain types (interfaces, type aliases, and their co-located Zod schemas with `z.infer<>` types). This is the primary home for types consumed across multiple files. Import from here freely.
+- **`src/lib/types/[domain].ts`** — shared, importable domain types (interfaces, type aliases). Plain TS types only — no Zod here. This is the primary home for types consumed across multiple files. Import from here freely.
+- **`src/schemas/[domain].ts`** — Zod validation schemas and their `z.infer<>` types. All Zod schemas live here, not in `src/lib/types/`.
 - **`src/db/types.ts`** — database-inferred types (`SelectCourse`, `CourseWithTopics`, etc.) centralized from Drizzle schema. Do not scatter these across schema files.
 - **`src/components/[domain]/types.ts`** — types specific to a component domain, not needed outside that folder.
 - **`/types/[name].d.ts`** — ambient global declarations only (`declare global { interface ... }`), such as Clerk session claim augmentations and i18n message types. TypeScript picks these up automatically — never import from this directory.
-- **`'use server'` files** — must only export `async` server actions. Never export `interface` or `type` from a `'use server'` file; consumers importing that type will inadvertently pull the module into a server-only boundary. Move shared types to `src/lib/types/[domain].ts`.
+- **`'use server'` files** — must only export `async` server actions. Never export `interface` or `type` from a `'use server'` file; consumers importing that type will inadvertently pull the module into a server-only boundary. Move shared types to `src/lib/types/[domain].ts` and Zod schemas to `src/schemas/[domain].ts`.
 
 ```typescript
 // ❌ Exporting a type from a 'use server' file
@@ -406,8 +411,8 @@ export interface CreateBookParams { ... }
 import type { CreateBookParams } from '@/lib/types/books';
 export const createBook = async (params: CreateBookParams) => { ... };
 
-// ✅ Zod schema and inferred type co-located in domain type file
-// src/lib/types/adoptions.ts
+// ✅ Zod schema lives in src/schemas/
+// src/schemas/adoptions.ts
 export const adoptionFilterSchema = z.object({ ... });
 export type AdoptionFilterOptions = z.infer<typeof adoptionFilterSchema>;
 ```

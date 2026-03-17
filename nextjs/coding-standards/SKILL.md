@@ -101,10 +101,10 @@ All work must satisfy readability, KISS, DRY, YAGNI, and security — specifical
 | React component | `src/components/[domain]/` |
 | Custom hook | `src/hooks/use-[name].ts` |
 | Shared constants | `src/lib/constants.ts` |
-| Shared importable types | `src/lib/types/[domain].ts` |
+| Shared utility functions | `src/lib/utils/[domain].ts` |
+| Shared importable types (plain TS) | `src/lib/types/[domain].ts` |
 | Database-inferred types | `src/db/types.ts` |
-| Zod schemas (domain) | `src/lib/types/[domain].ts` (alongside `z.infer<>` types) |
-| Zod schemas (AI / jobs) | `src/ai/schemas.ts` / `src/jobs/schemas.ts` |
+| Zod schemas (validation) | `src/schemas/[domain].ts` |
 | Component-specific types | `src/components/[domain]/types.ts` |
 | Ambient global declarations | `/types/[name].d.ts` — never import directly |
 
@@ -141,6 +141,6 @@ Before opening a PR, check:
 - [ ] `middleware.ts` — must be `proxy.ts`
 - [ ] Wrapper function that only calls through — delete it
 - [ ] Barrel `index.ts` without justification — remove, use direct imports
-- [ ] `interface`/`type` exported from a `'use server'` file — move to `src/lib/types/[domain].ts`
+- [ ] `interface`/`type` exported from a `'use server'` file — move to `src/lib/types/[domain].ts` (types) or `src/schemas/[domain].ts` (Zod schemas)
 - [ ] Sequential `for` loop over independent async calls — replace with `Promise.all`
 
