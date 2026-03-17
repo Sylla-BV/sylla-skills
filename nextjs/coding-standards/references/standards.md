@@ -381,6 +381,10 @@ src/components/StatusBadge.tsx  // PascalCase
 
 For the canonical file-location table, see the **Quick Reference → Where Things Live** section in `SKILL.md`.
 
+### Utility Functions
+
+**`src/lib/utils/[domain].ts`** — shared utility functions, organised by domain using kebab-case file names (e.g. `authorisation.ts`, `file-validation.ts`, `learning-resources.ts`). Place reusable, non-DB helper logic here rather than scattering it across feature folders.
+
 ### Types Location
 
 Four distinct places for types — know which to use:

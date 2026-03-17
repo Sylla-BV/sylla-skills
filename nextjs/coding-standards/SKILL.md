@@ -101,6 +101,7 @@ All work must satisfy readability, KISS, DRY, YAGNI, and security — specifical
 | React component | `src/components/[domain]/` |
 | Custom hook | `src/hooks/use-[name].ts` |
 | Shared constants | `src/lib/constants.ts` |
+| Shared utility functions | `src/lib/utils/[domain].ts` |
 | Shared importable types (plain TS) | `src/lib/types/[domain].ts` |
 | Database-inferred types | `src/db/types.ts` |
 | Zod schemas (validation) | `src/schemas/[domain].ts` |
