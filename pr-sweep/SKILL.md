@@ -12,6 +12,7 @@ allowed_tools:
   - Bash(gh api:*)
   - Bash(gh repo view:*)
   - Bash(git diff:*)
+  - Bash(git rev-parse:*)
   - Bash(jq:*)
   - Read
   - Grep
@@ -102,7 +103,20 @@ For each unresolved thread:
 
 Resolution criteria: only mark as addressed when the feedback is **fully** resolved. When in doubt, leave unresolved and add to the task list.
 
-### Step 4 - Resolve Addressed Comments
+### Step 4 - Check Remote Sync Before Resolving
+
+Before replying or resolving any thread, verify that all local commits are pushed to remote. Replies that reference code changes are meaningless if reviewers cannot yet see those changes.
+
+```bash
+git rev-parse HEAD
+git rev-parse origin/$(git rev-parse --abbrev-ref HEAD) 2>/dev/null || echo "NO_REMOTE"
+```
+
+If the two SHAs differ (or remote ref does not exist), **skip reply and resolve entirely** — proceed directly to Step 5 to create tasks. Include a note in the output that threads were not resolved because unpushed commits are present.
+
+If the SHAs match, proceed with reply and resolve below.
+
+### Step 4a - Resolve Addressed Comments (only when remote is up-to-date)
 
 For each comment determined to be addressed:
 
@@ -152,6 +166,8 @@ For comments still needing work:
 
 ### Output Format
 
+When remote is up-to-date:
+
 ```
 ## Auto-Resolved Comments (X)
 
@@ -175,9 +191,31 @@ For comments still needing work:
 <task list summary>
 ```
 
+When remote is behind (unpushed commits):
+
+```
+⚠️ Unpushed commits detected — skipping reply and resolve.
+Push changes first, then re-run pr-sweep to auto-resolve addressed threads.
+
+## Would Auto-Resolve (X) — pending push
+
+### [file:line] - Thread ID
+**Comment:** <summary>
+**Resolved because:** <reasoning>
+
+---
+
+## Remaining Comments (Y)
+...
+
+## Created Tasks
+<task list summary>
+```
+
 ## Important Notes
 
 - Only resolve comments where the feedback is fully addressed
+- Never reply or resolve when local commits are not yet pushed — reviewers cannot see the referenced changes
 - Always reply before resolving so reviewers see the context
 - For comments about missing tests or documentation, verify those were actually added
 - For refactoring suggestions, confirm the new code achieves the same goal
