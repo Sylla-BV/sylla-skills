@@ -159,4 +159,5 @@ Before opening a PR, check:
 - [ ] `updateTag` called from Route Handler — will silently fail; use `revalidateTag(tag, 'max')` instead
 - [ ] `revalidateTag` called from Server Action without `'max'` — use `updateTag` for instant refresh
 - [ ] Cached function returning error fallback data — caches the error state; throw instead so cache is skipped
+- [ ] Function appears computationally heavy or performs slow I/O (large DB queries, external API calls, expensive transforms) — ask if it should be wrapped with `'use cache'`
 
