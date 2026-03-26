@@ -77,6 +77,17 @@ All work must satisfy readability, KISS, DRY, YAGNI, and security — specifical
 | Independent async function calls | `Promise.all` — not `db.batch()` |
 | `institutionId` on user/institution queries | Required unless `isSuperAdmin` confirms admin |
 
+### Caching
+
+| Rule | Standard |
+|------|----------|
+| Caching directive | `'use cache'` at top of function body (NOT `unstable_cache`) |
+| Cache tags | `cacheTag(CACHE_TAGS.X, ...)` — always use `CACHE_TAGS` constant, never hardcode strings |
+| Cache lifetime | `cacheLife('profile')` — use named profiles from `next.config.mjs`, never hardcode durations |
+| Invalidation in Server Actions | `updateTag(tag)` — instant UI refresh |
+| Invalidation in Route Handlers/jobs | `revalidateTag(tag, 'max')` — `'max'` expiry required |
+| `unstable_cache` | Banned — fully migrated |
+
 ### File & Naming
 
 | Thing | Convention |
@@ -143,4 +154,9 @@ Before opening a PR, check:
 - [ ] Barrel `index.ts` without justification — remove, use direct imports
 - [ ] `interface`/`type` exported from a `'use server'` file — move to `src/lib/types/[domain].ts` (types) or `src/schemas/[domain].ts` (Zod schemas)
 - [ ] Sequential `for` loop over independent async calls — replace with `Promise.all`
+- [ ] `unstable_cache` usage — replace with `'use cache'` directive
+- [ ] Hardcoded cache tag string — use `CACHE_TAGS` constant from `src/lib/constants.ts`
+- [ ] `updateTag` called from Route Handler — will silently fail; use `revalidateTag(tag, 'max')` instead
+- [ ] `revalidateTag` called from Server Action without `'max'` — use `updateTag` for instant refresh
+- [ ] Cached function returning error fallback data — caches the error state; throw instead so cache is skipped
 
