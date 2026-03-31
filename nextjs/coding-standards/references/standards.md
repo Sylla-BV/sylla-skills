@@ -565,6 +565,166 @@ const courses = await db.query.courses.findMany();
 
 ---
 
+## Caching
+
+### `'use cache'` Pattern
+
+Place the `'use cache'` directive at the top of the function body, followed by `cacheTag()` and `cacheLife()` before any logic. Cache keys are derived automatically from function arguments — no manual key arrays needed.
+
+```typescript
+// ✅ Simplest pattern — single tag, default cacheLife
+// (see src/db/queries/chats.ts:19-33)
+export const getRecentChatsForUser = async ({
+  userId,
+  institutionId,
+}: GetChatsParams): Promise<Chat[]> => {
+  'use cache';
+  cacheTag(`${CACHE_TAGS.CHATS}:${institutionId}:${userId}`);
+  cacheLife('default');
+
+  return db.query.chats.findMany({
+    where: (chats, { eq, and }) =>
+      and(eq(chats.userId, userId), eq(chats.institutionId, institutionId)),
+  });
+};
+
+// ✅ Named cacheLife profile with multiple tags
+// (see src/db/queries/adoptions.ts:720-724)
+export const getAdoptionDashboardData = async ({
+  institutionId,
+}: AdoptionParams) => {
+  'use cache';
+  cacheTag(CACHE_TAGS.ADOPTIONS, `${CACHE_TAGS.ADOPTIONS}:${institutionId}`);
+  cacheLife('adoptions');
+
+  // query logic...
+};
+
+// ❌ unstable_cache — banned, fully migrated
+const getCachedData = unstable_cache(
+  async (id: string) => fetchData(id),
+  ['data-cache-key'],
+  { revalidate: 3600 }
+);
+```
+
+### Cache Key Derivation
+
+With `'use cache'`, cache keys are derived automatically from the function's arguments. No manual key arrays are needed — this is a key advantage over `unstable_cache`.
+
+```typescript
+// ✅ 'use cache' — keys derived from (userId, institutionId) automatically
+export const getUserData = async (userId: string, institutionId: string) => {
+  'use cache';
+  cacheTag(`${CACHE_TAGS.USERS}:${institutionId}`);
+  cacheLife('default');
+  // ...
+};
+
+// ❌ unstable_cache — required manual key arrays (error-prone)
+const getUserData = unstable_cache(
+  async (userId: string, institutionId: string) => { ... },
+  ['user-data'],  // ❌ manual key — easy to forget or collide
+  { revalidate: 3600 }
+);
+```
+
+### Tag Naming
+
+Always use the `CACHE_TAGS` constant from `src/lib/constants.ts:90-98`. Never hardcode tag strings. Use template literals for scoped tags that include dynamic values like `institutionId`.
+
+```typescript
+// ✅ Use CACHE_TAGS constant
+cacheTag(CACHE_TAGS.ADOPTIONS);
+cacheTag(`${CACHE_TAGS.CHATS}:${institutionId}:${userId}`);
+
+// ❌ Hardcoded strings — fragile, no single source of truth
+cacheTag('adoptions');
+cacheTag(`chats:${institutionId}`);
+```
+
+### Named Profiles
+
+Cache lifetimes use named profiles defined in `next.config.mjs`. Each profile specifies `stale` (serve stale while revalidating), `revalidate` (background refresh interval), and `expire` (hard expiry). Never hardcode durations inline.
+
+```typescript
+// ✅ Named profile from next.config.mjs
+// (see src/db/queries/adoptions.ts:720-724)
+cacheLife('adoptions');
+
+// ✅ Another named profile
+// (see src/hooks/use-learning-resource.server.ts:122-124)
+cacheLife('saved-analytics');
+
+// ❌ Hardcoded duration — use a named profile instead
+cacheLife({ stale: 300, revalidate: 900, expire: 3600 });
+```
+
+### Invalidation Split
+
+Two invalidation functions serve different contexts. Using the wrong one will silently fail or produce suboptimal behavior.
+
+**`updateTag(tag)`** — Server Actions only. Triggers instant UI refresh via the React tree.
+
+**`revalidateTag(tag, 'max')`** — Route Handlers, cron jobs, webhooks, or anywhere outside a Server Action. The `'max'` expiry parameter is required.
+
+```typescript
+// ✅ Server Action — use updateTag for instant refresh
+// (see src/actions/cache.ts)
+'use server';
+export const refreshAdoptions = async (institutionId: string) => {
+  updateTag(`${CACHE_TAGS.ADOPTIONS}:${institutionId}`);
+};
+
+// ✅ Route Handler — use revalidateTag with 'max'
+// (see src/app/[locale]/api/chat/route.ts:318)
+export const POST = async (request: Request) => {
+  // ... handle request ...
+  revalidateTag(`${CACHE_TAGS.CHATS}:${institutionId}`, 'max');
+};
+
+// ❌ updateTag in a Route Handler — will silently fail
+export const POST = async (request: Request) => {
+  updateTag(CACHE_TAGS.CHATS); // ❌ — not in a Server Action context
+};
+
+// ❌ revalidateTag in a Server Action without 'max' — suboptimal
+'use server';
+export const refresh = async () => {
+  revalidateTag(CACHE_TAGS.ADOPTIONS); // ❌ — use updateTag instead
+};
+```
+
+### Error Handling in Cached Functions
+
+Never return fallback data from a cached function's error branch. If an error occurs and you return a fallback value, that fallback gets cached — subsequent requests will serve the error state until the cache expires. Instead, throw so the cache entry is not stored.
+
+```typescript
+// ✅ Throw on error — cache entry is not stored
+export const getAnalyticsData = async (institutionId: string) => {
+  'use cache';
+  cacheTag(`${CACHE_TAGS.ANALYTICS}:${institutionId}`);
+  cacheLife('analytics');
+
+  const result = await fetchAnalytics(institutionId);
+  if (!result) throw new Error('Analytics fetch failed');
+  return result;
+};
+
+// ❌ Returning fallback data — caches the error state
+export const getAnalyticsData = async (institutionId: string) => {
+  'use cache';
+  cacheTag(`${CACHE_TAGS.ANALYTICS}:${institutionId}`);
+  cacheLife('analytics');
+
+  const result = await fetchAnalytics(institutionId);
+  if (!result) return { data: [], total: 0 }; // ❌ — this gets cached!
+  return result;
+};
+```
+
+---
+
 ## Naming
 
 ### General Conventions
