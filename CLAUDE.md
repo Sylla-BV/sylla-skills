@@ -32,6 +32,7 @@ Every skill follows this layout:
 | verify (Python) | `python/verify/` | Code quality gate for Python files |
 | code-upkeep | `python/code-upkeep/` | Audit and update Python docstrings and test coverage |
 | pr-sweep | `pr-sweep/` | Triage and resolve GitHub PR review comments |
+| playwright-cli | `playwright-cli/` | Browser automation with Playwright CLI (navigation, forms, testing, tracing) |
 
 ## Commit Conventions
 
