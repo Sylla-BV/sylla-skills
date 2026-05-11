@@ -855,6 +855,40 @@ setItems(prev => [...prev, newItem]);
 setCount(count + 1);
 ```
 
+### Page Content Width
+
+`PageLayout` owns horizontal content width via the `contentWidth` prop. Three variants:
+
+| Variant | Width | Use case |
+|---|---|---|
+| `narrow` | `max-w-3xl` (~768px) | Single-column form pages |
+| `wide` | `max-w-7xl` (~1280px) | Forms embedding tables or CSV previews |
+| `default` | `max-w-[1400px]` | Most content pages (omit the prop) |
+
+Avoid introducing `mx-auto max-w-*` wrappers on page-root elements — they drift over time and multiply widths across sibling flows. Let `PageLayout` own width so the decision lives in one place.
+
+```typescript
+// ✅ Width via the prop; no inner wrapper
+export default async function AddProfilePage() {
+  return (
+    <PageLayout breadcrumbItems={crumbs} contentWidth='narrow'>
+      <ProfileForm user={user} />
+    </PageLayout>
+  );
+}
+
+// ❌ Ad-hoc wrapper — each page picks its own max-w-*
+export default async function AddProfilePage() {
+  return (
+    <div className='mx-auto max-w-2xl px-4 py-8'>
+      <ProfileForm user={user} />
+    </div>
+  );
+}
+```
+
+Form components must not wrap their own root in `max-w-*`. The form doesn't know what page it's embedded in; the page decides width. If a form embeds a widget that has wide content (e.g. `CsvImport`), the hosting page uses `contentWidth='wide'`.
+
 ---
 
 ## Code Smell Checklist

@@ -8,6 +8,7 @@ description: >-
   "arrow functions", "named vs default export", "how to structure this file",
   "barrel files", "institutionId", "multi-tenant", "page-content pattern",
   "naming conventions", "SCREAMING_SNAKE_CASE", "reviewing a PR",
+  "page width", "content width", "PageLayout",
   "does this pass code review", or wants to know whether
   code follows Sylla's Next.js 16 repository standards.
 ---
@@ -130,6 +131,7 @@ All work must satisfy readability, KISS, DRY, YAGNI, and security — specifical
 | State that depends on previous | Functional updater `setX(prev => ...)` |
 | `page-content.tsx` | Use when page is client-driven but needs a one-time server data load |
 | Routes with top-level `await` | Must have sibling `loading.tsx` |
+| Page content width | Set via `PageLayout` `contentWidth` prop (`'narrow'` \| `'wide'` \| `'default'`) — avoid ad-hoc `mx-auto max-w-*` on page roots |
 
 ---
 
