@@ -33,6 +33,7 @@ Every skill follows this layout:
 | code-upkeep | `python/code-upkeep/` | Audit and update Python docstrings and test coverage |
 | pr-sweep | `pr-sweep/` | Triage and resolve GitHub PR review comments |
 | playwright-cli | `playwright-cli/` | Browser automation with Playwright CLI (navigation, forms, testing, tracing) |
+| release | `release/` | Open PRs following Sylla's monthly release-branch model (feat/* → master, fix/* → release + master) |
 
 ## Commit Conventions
 
