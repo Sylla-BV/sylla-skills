@@ -14,6 +14,7 @@ A collection of agent skills for AI coding assistants, built for Sylla's stack. 
 | [code-upkeep](./python/code-upkeep/) | Audits and updates Python docstrings and test coverage | `bunx skills add sylla-bv/sylla-skills/python/code-upkeep` |
 | [resolve-pr-comments](./resolve-pr-comments/) | Triages and resolves GitHub PR review comments | `bunx skills add sylla-bv/sylla-skills/resolve-pr-comments` |
 | [playwright-cli](./playwright-cli/) | Browser automation with Playwright CLI — navigation, forms, screenshots, testing, tracing | `bunx skills add sylla-bv/sylla-skills/playwright-cli` |
+| [release](./release/) | Creates PRs following Sylla's monthly release-branch model — 1 PR for features, 2 PRs with cherry-pick for bug fixes | `bunx skills add sylla-bv/sylla-skills/release` |
 
 ## Installation
 
